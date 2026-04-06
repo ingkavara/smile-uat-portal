@@ -1,0 +1,3061 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>UAT Test Case Progress — Overdue Start Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES — OutSystems Theme
+══════════════════════════════════════════════ */
+:root {
+  /* Brand */
+  --os-red:        #E83D2A;
+  --os-red-hover:  #C4321E;
+  --os-red-light:  rgba(232,61,42,.12);
+  --os-red-dim:    rgba(232,61,42,.20);
+
+  /* Dark palette (default) */
+  --bg:            #0F1927;
+  --bg2:           #182232;
+  --bg3:           #1E2D3F;
+  --bg4:           #243449;
+  --border:        #2A3A4C;
+  --border2:       #354C63;
+  --txt:           #E8EDF2;
+  --txt2:          #8EA4BC;
+  --txt3:          #5A7490;
+  --blue:          #4A9EE0;
+  --blue-bg:       rgba(74,158,224,.15);
+  --green:         #34C97A;
+  --green-bg:      rgba(52,201,122,.12);
+  --orange:        #F5A623;
+  --orange-bg:     rgba(245,166,35,.12);
+  --purple:        #9B72E8;
+  --purple-bg:     rgba(155,114,232,.12);
+  --danger-bg:     rgba(232,61,42,.12);
+  --shadow:        0 2px 8px rgba(0,0,0,.40);
+  --shadow-lg:     0 4px 20px rgba(0,0,0,.50);
+}
+[data-theme="light"] {
+  --bg:            #FFFFFF;
+  --bg2:           #E8EDF4;
+  --bg3:           #FFFFFF;
+  --bg4:           #FFFFFF;
+  --border:        #D0D9E6;
+  --border2:       #B8C6D8;
+  --txt:           #1A2B3C;
+  --txt2:          #526070;
+  --txt3:          #8EA4BC;
+  --blue:          #1A6FAD;
+  --blue-bg:       rgba(26,111,173,.10);
+  --green:         #167A42;
+  --green-bg:      rgba(22,122,66,.10);
+  --orange:        #B8720A;
+  --orange-bg:     rgba(184,114,10,.10);
+  --purple:        #6B3FBF;
+  --purple-bg:     rgba(107,63,191,.10);
+  --danger-bg:     rgba(232,61,42,.08);
+  --shadow:        0 1px 4px rgba(0,0,0,.10);
+  --shadow-lg:     0 4px 16px rgba(0,0,0,.14);
+}
+
+/* ══════════════════════════════════════════════
+   BASE
+══════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Source Sans Pro','Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--txt);min-height:100vh;
+  transition:background .2s,color .2s;
+}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--txt3)}
+
+/* ══════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════ */
+.header{
+  background:var(--bg3);
+  border-bottom:2px solid var(--os-red);
+  padding:0 24px;
+  height:56px;
+  display:flex;align-items:center;gap:14px;
+  position:sticky;top:0;z-index:200;
+  box-shadow:var(--shadow);
+}
+.header-logo{
+  width:32px;height:32px;
+  background:var(--os-red);
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;flex-shrink:0;
+}
+.header-info{flex:1;min-width:0}
+.header-title{
+  font-size:.95rem;font-weight:700;color:var(--txt);
+  letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.header-sub{font-size:.72rem;color:var(--txt2);margin-top:1px}
+.header-badge{
+  background:var(--os-red);color:#fff;
+  font-size:.68rem;font-weight:700;
+  padding:2px 9px;border-radius:4px;
+  letter-spacing:.5px;flex-shrink:0;
+}
+.header-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.today-chip{
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--txt2);font-size:.72rem;padding:4px 10px;border-radius:4px;
+  white-space:nowrap;
+}
+
+/* Theme toggle */
+.theme-toggle{
+  width:34px;height:34px;border-radius:6px;
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--txt2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.95rem;transition:all .15s;
+}
+.theme-toggle:hover{border-color:var(--os-red);color:var(--os-red)}
+
+/* ══════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════ */
+.main{padding:18px 24px;max-width:1440px;margin:0 auto}
+
+/* ══════════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════════ */
+.card{
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:8px;margin-bottom:14px;
+  overflow:hidden;box-shadow:var(--shadow);
+  transition:box-shadow .2s;
+}
+.card:hover{box-shadow:var(--shadow-lg)}
+.card-header{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;cursor:pointer;user-select:none;
+  border-bottom:1px solid var(--border);
+  background:var(--bg3);
+}
+.card-header:hover{background:var(--bg4)}
+.card-icon{
+  width:26px;height:26px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;flex-shrink:0;
+}
+.card-icon.red{background:var(--os-red-light)}
+.card-icon.blue{background:var(--blue-bg)}
+.card-icon.orange{background:var(--orange-bg)}
+.card-icon.green{background:var(--green-bg)}
+.card-title{
+  font-size:.82rem;font-weight:700;color:var(--txt);
+  letter-spacing:.4px;text-transform:uppercase;
+}
+.card-body{padding:16px}
+.card-body.collapsed{display:none}
+.toggle-arrow{
+  margin-left:auto;font-size:.7rem;color:var(--txt3);
+  transition:transform .2s;
+}
+
+/* ══════════════════════════════════════════════
+   SECTION TITLE
+══════════════════════════════════════════════ */
+.section-title{
+  font-size:.72rem;font-weight:700;color:var(--txt2);
+  text-transform:uppercase;letter-spacing:.8px;
+  margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ══════════════════════════════════════════════
+   UPLOAD / DROP ZONE
+══════════════════════════════════════════════ */
+.drop-zone{
+  border:2px dashed var(--border2);border-radius:8px;
+  padding:32px 16px;text-align:center;cursor:pointer;
+  transition:all .2s;position:relative;background:var(--bg4);
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--os-red);background:var(--os-red-light);
+}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop-icon{font-size:2.2rem;margin-bottom:10px}
+.drop-label{font-size:.8rem;color:var(--txt2)}
+.drop-label span{color:var(--os-red);font-weight:700}
+.file-name{font-size:.78rem;color:var(--green);margin-top:8px;font-weight:600}
+
+/* ══════════════════════════════════════════════
+   COLUMN MAPPING
+══════════════════════════════════════════════ */
+.col-map-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));
+  gap:10px;margin-top:12px;
+}
+.col-map-item label{
+  display:block;font-size:.68rem;color:var(--txt2);
+  margin-bottom:3px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.col-map-item select{
+  width:100%;background:var(--bg);
+  border:1px solid var(--border);color:var(--txt);
+  padding:6px 8px;border-radius:5px;font-size:.78rem;
+  outline:none;transition:border-color .15s;
+  font-family:inherit;
+}
+.col-map-item select:focus{border-color:var(--os-red)}
+.map-note{font-size:.72rem;color:var(--txt3);margin-top:10px;font-style:italic}
+
+/* Group divider inside col-map */
+.col-map-divider{
+  grid-column:1/-1;margin-top:6px;margin-bottom:0;
+  font-size:.65rem;color:var(--os-red);font-weight:700;
+  text-transform:uppercase;letter-spacing:.6px;
+  border-bottom:1px solid var(--border);padding-bottom:4px;
+}
+
+/* ══════════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════════ */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;border-radius:5px;
+  font-size:.8rem;font-weight:600;cursor:pointer;
+  border:none;transition:all .15s;font-family:inherit;
+  white-space:nowrap;
+}
+.btn-primary{background:var(--os-red);color:#fff}
+.btn-primary:hover{background:var(--os-red-hover);box-shadow:0 2px 8px var(--os-red-dim)}
+.btn-outline{
+  background:transparent;
+  border:1px solid var(--border2);color:var(--txt2);
+}
+.btn-outline:hover{border-color:var(--os-red);color:var(--os-red)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+
+/* Save indicator */
+.save-indicator{
+  font-size:.72rem;color:var(--green);
+  display:none;align-items:center;gap:4px;
+  padding:4px 10px;background:var(--green-bg);
+  border:1px solid rgba(52,201,122,.3);border-radius:5px;
+}
+.save-indicator.show{display:inline-flex}
+.saved-dot{width:6px;height:6px;background:var(--green);border-radius:50%}
+
+/* ══════════════════════════════════════════════
+   KPI CARDS
+══════════════════════════════════════════════ */
+.kpi-row{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:10px;margin-bottom:14px;
+}
+.kpi{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;padding:14px 12px;text-align:center;
+  position:relative;overflow:hidden;box-shadow:var(--shadow);
+  transition:transform .15s,box-shadow .15s;
+}
+.kpi:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.kpi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--kpi-color,var(--border));
+}
+.kpi.danger{--kpi-color:var(--os-red)}
+.kpi.warning{--kpi-color:var(--orange)}
+.kpi.ok{--kpi-color:var(--green)}
+.kpi.info{--kpi-color:var(--blue)}
+.kpi.purple{--kpi-color:var(--purple)}
+.kpi-val{font-size:1.9rem;font-weight:800;line-height:1;margin-top:4px}
+.kpi.danger  .kpi-val{color:var(--os-red)}
+.kpi.warning .kpi-val{color:var(--orange)}
+.kpi.ok      .kpi-val{color:var(--green)}
+.kpi.info    .kpi-val{color:var(--blue)}
+.kpi.purple  .kpi-val{color:var(--purple)}
+.kpi-lbl{font-size:.68rem;color:var(--txt3);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ══════════════════════════════════════════════
+   FILTER SECTION
+══════════════════════════════════════════════ */
+.filter-section{
+  background:var(--bg4);border-radius:6px;
+  padding:12px 14px;
+}
+.filter-row{
+  display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;margin-bottom:8px;
+}
+.filter-row:last-child{margin-bottom:0}
+.filter-label{
+  font-size:.68rem;color:var(--txt3);font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;
+  min-width:90px;flex-shrink:0;
+}
+.chip{
+  display:inline-flex;align-items:center;
+  padding:3px 10px;border-radius:4px;
+  font-size:.72rem;cursor:pointer;
+  border:1px solid var(--border2);
+  background:var(--bg3);color:var(--txt2);
+  transition:all .12s;user-select:none;
+}
+.chip:hover{border-color:var(--os-red);color:var(--os-red)}
+.chip.active{background:var(--os-red);border-color:var(--os-red);color:#fff;font-weight:700}
+.chip.active.blue  {background:var(--blue);  border-color:var(--blue)}
+.chip.active.green {background:var(--green); border-color:var(--green)}
+.chip.active.orange{background:var(--orange);border-color:var(--orange)}
+.chip-clear{
+  background:transparent;
+  border-color:var(--os-red);color:var(--os-red);
+}
+.chip-clear:hover{background:var(--os-red-light)}
+
+/* ══════════════════════════════════════════════
+   TABLE CONTROLS
+══════════════════════════════════════════════ */
+.table-controls{
+  display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;margin-bottom:12px;
+}
+.select-group{display:flex;align-items:center;gap:6px}
+.select-group label{font-size:.72rem;color:var(--txt2);white-space:nowrap}
+.select-group select{
+  background:var(--bg);border:1px solid var(--border2);
+  color:var(--txt);padding:5px 8px;border-radius:5px;
+  font-size:.78rem;outline:none;font-family:inherit;
+  transition:border-color .15s;
+}
+.select-group select:focus{border-color:var(--os-red)}
+
+/* ══════════════════════════════════════════════
+   TABLES
+══════════════════════════════════════════════ */
+.table-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{
+  background:var(--bg2);color:var(--txt2);
+  font-weight:700;padding:9px 11px;text-align:left;
+  white-space:nowrap;font-size:.68rem;
+  text-transform:uppercase;letter-spacing:.5px;
+  cursor:pointer;user-select:none;
+  position:sticky;top:0;z-index:1;
+  border-bottom:1px solid var(--border);
+}
+thead th:hover{color:var(--os-red)}
+thead th .sort-arrow{margin-left:4px;opacity:.45}
+thead th.asc  .sort-arrow::after{content:'▲'}
+thead th.desc .sort-arrow::after{content:'▼'}
+thead th:not(.asc):not(.desc) .sort-arrow::after{content:'⇅'}
+tbody tr{border-top:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--bg4)}
+td{padding:8px 11px;color:var(--txt2);vertical-align:middle}
+.empty-cell{text-align:center;color:var(--txt3);padding:28px;font-style:italic}
+
+/* Overdue row accent */
+tr.row-overdue td:first-child{border-left:3px solid var(--os-red)}
+tr.row-overdue{background:var(--danger-bg)}
+
+/* ══════════════════════════════════════════════
+   STATUS / BADGES
+══════════════════════════════════════════════ */
+.status-chip{
+  display:inline-block;padding:2px 9px;border-radius:4px;
+  font-size:.68rem;font-weight:700;white-space:nowrap;
+}
+.s-notstarted{background:var(--bg2);     color:var(--txt2);    border:1px solid var(--border2)}
+.s-inprogress{background:var(--blue-bg); color:var(--blue);    border:1px solid rgba(74,158,224,.35)}
+.s-pass      {background:var(--green-bg);color:var(--green);   border:1px solid rgba(52,201,122,.35)}
+.s-fail      {background:var(--danger-bg);color:var(--os-red); border:1px solid rgba(232,61,42,.35)}
+.s-blocked   {background:var(--orange-bg);color:var(--orange); border:1px solid rgba(245,166,35,.35)}
+.s-na        {background:var(--bg2);     color:var(--txt3);    border:1px solid var(--border)}
+.s-deferred  {background:var(--purple-bg);color:var(--purple); border:1px solid rgba(155,114,232,.35)}
+.s-cancel    {background:var(--bg2);     color:var(--txt3);    border:1px solid var(--border);text-decoration:line-through}
+
+.overdue-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  background:var(--danger-bg);color:var(--os-red);
+  border:1px solid rgba(232,61,42,.35);
+  padding:2px 7px;border-radius:4px;font-size:.68rem;font-weight:700;
+}
+.overdue-attn{
+  width:14px;height:14px;background:var(--os-red);border-radius:50%;
+  font-size:.58rem;display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:900;flex-shrink:0;
+}
+.overdue-mini{
+  width:9px;height:9px;background:var(--os-red);border-radius:50%;
+  font-size:.5rem;display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:900;flex-shrink:0;vertical-align:middle;margin-right:2px;
+}
+
+/* Count badges */
+.count-badge{
+  background:var(--bg2);color:var(--txt2);
+  font-size:.65rem;padding:1px 7px;border-radius:4px;border:1px solid var(--border);
+}
+.count-badge.red{
+  background:var(--danger-bg);color:var(--os-red);
+  border-color:rgba(232,61,42,.35);
+}
+
+/* ══════════════════════════════════════════════
+   PAGINATION
+══════════════════════════════════════════════ */
+.pg{
+  display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;
+  align-items:center;justify-content:flex-end;
+}
+.pg button{
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--txt2);padding:4px 9px;border-radius:4px;
+  cursor:pointer;font-size:.72rem;font-family:inherit;transition:all .12s;
+}
+.pg button:hover{border-color:var(--os-red);color:var(--os-red)}
+.pg button.active{background:var(--os-red);border-color:var(--os-red);color:#fff;font-weight:700}
+.pg-info{font-size:.72rem;color:var(--txt3);margin-right:auto}
+
+/* ══════════════════════════════════════════════
+   MISC
+══════════════════════════════════════════════ */
+.text-muted{color:var(--txt3)}
+.text-danger{color:var(--os-red)}
+.preview-table-wrap{
+  overflow-x:auto;max-height:120px;
+  border:1px solid var(--border);border-radius:5px;
+  margin-top:8px;
+}
+.preview-table-wrap table thead th{font-size:.62rem;padding:5px 8px;background:var(--bg2)}
+.preview-table-wrap table td{padding:4px 8px;font-size:.7rem}
+.checkbox-wrap{display:flex;align-items:center;gap:5px;cursor:pointer}
+.checkbox-wrap input[type=checkbox]{accent-color:var(--os-red);width:14px;height:14px;cursor:pointer}
+.checkbox-wrap label{font-size:.72rem;color:var(--txt2);cursor:pointer;white-space:nowrap}
+
+/* ══════════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════════ */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.68);
+  z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.modal-box{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:10px;width:100%;max-width:620px;max-height:92vh;
+  overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);
+}
+.modal-header{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.modal-title{font-size:.9rem;font-weight:700;color:var(--txt);flex:1}
+.modal-close{
+  width:28px;height:28px;border-radius:5px;
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--txt2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:.9rem;
+}
+.modal-close:hover{border-color:var(--os-red);color:var(--os-red)}
+.modal-body{padding:18px;overflow-y:auto;flex:1}
+
+/* Tabs */
+.tab-bar{
+  display:flex;gap:4px;margin-bottom:16px;
+  background:var(--bg2);border-radius:6px;padding:3px;
+}
+.tab-btn{
+  flex:1;padding:7px 12px;border-radius:4px;
+  font-size:.78rem;font-weight:600;cursor:pointer;
+  border:none;background:transparent;color:var(--txt2);
+  transition:all .15s;font-family:inherit;text-align:center;
+}
+.tab-btn.active{background:var(--bg3);color:var(--txt);box-shadow:var(--shadow)}
+
+/* Form fields */
+.form-group{margin-bottom:14px}
+.form-label{
+  display:block;font-size:.72rem;font-weight:700;color:var(--txt2);
+  margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;
+}
+.form-input{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  color:var(--txt);padding:7px 10px;border-radius:5px;
+  font-size:.8rem;outline:none;transition:border-color .15s;font-family:inherit;
+}
+.form-input:focus{border-color:var(--os-red)}
+.form-textarea{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  color:var(--txt);padding:8px 10px;border-radius:5px;
+  font-size:.74rem;outline:none;resize:vertical;min-height:130px;
+  font-family:monospace;line-height:1.6;transition:border-color .15s;
+}
+.form-textarea:focus{border-color:var(--os-red)}
+.form-hint{font-size:.7rem;color:var(--txt3);margin-top:5px;line-height:1.5}
+
+/* Download toolbar */
+.dl-toolbar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-bottom:12px;padding:9px 12px;
+  background:var(--bg4);border-radius:6px;border:1px solid var(--border);
+}
+.dl-label{
+  font-size:.7rem;font-weight:700;color:var(--txt3);
+  text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;
+}
+
+/* ══════════════════════════════════════════════
+   SAVE AS MODAL
+══════════════════════════════════════════════ */
+.saveas-modal .modal-box{max-width:760px}
+
+/* Format selector cards */
+.format-cards{display:flex;gap:10px;margin-bottom:16px}
+.format-card{
+  flex:1;padding:12px 10px;border-radius:8px;
+  border:2px solid var(--border);background:var(--bg4);
+  cursor:pointer;text-align:center;transition:all .15s;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.format-card:hover{border-color:var(--os-red);background:var(--os-red-light)}
+.format-card.selected{border-color:var(--os-red);background:var(--os-red-light)}
+.format-card .fmt-icon{font-size:1.5rem;line-height:1}
+.format-card .fmt-name{font-size:.8rem;font-weight:700;color:var(--txt)}
+.format-card .fmt-desc{font-size:.65rem;color:var(--txt3)}
+
+/* Save-as preview table */
+.saveas-preview-wrap{
+  overflow-x:auto;max-height:240px;
+  border:1px solid var(--border);border-radius:6px;
+  margin-bottom:14px;background:var(--bg);
+}
+.saveas-preview-wrap table{font-size:.72rem}
+.saveas-preview-wrap thead th{
+  background:var(--bg2);color:var(--txt2);
+  padding:6px 9px;font-size:.65rem;
+  font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  position:sticky;top:0;z-index:1;white-space:nowrap;
+}
+.saveas-preview-wrap td{padding:5px 9px;color:var(--txt2);white-space:nowrap}
+
+/* ══════════════════════════════════════════════
+   NOTIFY MODAL — improved
+══════════════════════════════════════════════ */
+.notify-modal .modal-box{max-width:700px}
+
+/* Overdue summary chip in header */
+.notify-header-chips{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.notify-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:5px;font-size:.72rem;font-weight:700;
+}
+.notify-chip.danger{background:var(--danger-bg);color:var(--os-red);border:1px solid rgba(232,61,42,.3)}
+.notify-chip.info  {background:var(--blue-bg);color:var(--blue);border:1px solid rgba(74,158,224,.3)}
+
+/* Recipient pills */
+.recip-pill-row{
+  display:flex;gap:5px;flex-wrap:wrap;
+  min-height:34px;align-items:center;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;padding:5px 8px;
+  cursor:text;transition:border-color .15s;
+}
+.recip-pill-row:focus-within{border-color:var(--os-red)}
+.recip-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--bg2);border:1px solid var(--border2);
+  color:var(--txt);font-size:.72rem;padding:2px 8px;
+  border-radius:12px;white-space:nowrap;
+}
+.recip-pill .rm{
+  cursor:pointer;color:var(--txt3);font-size:.78rem;
+  line-height:1;margin-left:2px;transition:color .1s;
+}
+.recip-pill .rm:hover{color:var(--os-red)}
+.recip-pill-input{
+  border:none;outline:none;background:transparent;
+  color:var(--txt);font-size:.78rem;font-family:inherit;
+  min-width:160px;flex:1;
+}
+.recip-add-row{display:flex;gap:6px;margin-top:6px}
+
+/* Channel cards for Teams */
+.channel-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+.channel-card{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg4);border:1px solid var(--border);
+  border-radius:6px;padding:8px 10px;
+}
+.channel-card.selected{border-color:var(--os-red);background:var(--os-red-light)}
+.channel-name-input{
+  background:transparent;border:none;outline:none;
+  font-size:.8rem;font-weight:700;color:var(--txt);
+  font-family:inherit;min-width:80px;
+}
+.channel-url-input{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:4px;padding:4px 7px;font-size:.72rem;
+  color:var(--txt2);font-family:inherit;outline:none;
+  flex:1;transition:border-color .15s;
+}
+.channel-url-input:focus{border-color:var(--os-red)}
+.channel-status{
+  font-size:.68rem;min-width:90px;text-align:right;font-weight:700;
+  white-space:nowrap;
+}
+.channel-status.ok     {color:var(--green)}
+.channel-status.err    {color:var(--os-red)}
+.channel-status.sending{color:var(--orange)}
+/* Channel type badge */
+.ch-type-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:.62rem;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+  padding:2px 6px;border-radius:4px;flex-shrink:0;
+}
+.ch-type-badge.webhook{background:var(--blue-bg);color:var(--blue)}
+.ch-type-badge.teams_url{background:var(--purple-bg);color:var(--purple)}
+.ch-type-badge.teams_chat{background:var(--green-bg);color:var(--green)}
+
+/* Teams card preview */
+.teams-card-preview{
+  background:#fff;border-radius:6px;
+  border-left:4px solid #E83D2A;
+  padding:12px 14px;margin-bottom:12px;
+  font-family:'Segoe UI',sans-serif;
+  box-shadow:0 1px 4px rgba(0,0,0,.15);
+}
+[data-theme="dark"] .teams-card-preview{
+  background:var(--bg4);
+  box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+.tcp-title{font-weight:700;font-size:.88rem;color:var(--os-red);margin-bottom:4px}
+.tcp-sub{font-size:.74rem;color:var(--txt2);margin-bottom:8px}
+.tcp-fact{display:flex;gap:6px;margin-bottom:4px;font-size:.72rem}
+.tcp-fact-name{font-weight:700;color:var(--txt);min-width:120px;flex-shrink:0}
+.tcp-fact-val{color:var(--txt2)}
+.tcp-more{font-size:.7rem;color:var(--txt3);font-style:italic;margin-top:6px}
+
+/* Filename row */
+.filename-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.filename-row .form-input{flex:1}
+.filename-ext{
+  font-size:.78rem;font-weight:700;color:var(--txt3);
+  background:var(--bg2);border:1px solid var(--border);
+  padding:7px 10px;border-radius:5px;white-space:nowrap;flex-shrink:0;
+}
+
+/* PDF options */
+.pdf-cols-wrap{
+  background:var(--bg4);border:1px solid var(--border);
+  border-radius:6px;padding:12px 14px;margin-bottom:14px;
+}
+.pdf-cols-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:6px;margin-top:8px;
+}
+.saveas-info-bar{
+  display:flex;align-items:center;gap:10px;
+  background:var(--blue-bg);border:1px solid rgba(74,158,224,.25);
+  border-radius:6px;padding:8px 12px;margin-bottom:14px;
+  font-size:.74rem;color:var(--blue);
+}
+.saveas-row-count{font-weight:700}
+
+/* ══════════════════════════════════════════════
+   MONTH NAVIGATION
+══════════════════════════════════════════════ */
+.month-nav{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg4);border-radius:6px;
+  padding:10px 14px;margin-bottom:12px;flex-wrap:wrap;
+}
+.month-nav-btn{
+  width:30px;height:30px;border-radius:5px;
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--txt2);cursor:pointer;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;flex-shrink:0;
+}
+.month-nav-btn:hover{border-color:var(--os-red);color:var(--os-red)}
+.month-nav-label{
+  font-size:.88rem;font-weight:700;color:var(--txt);
+  min-width:160px;text-align:center;
+}
+.month-select{
+  background:var(--bg);border:1px solid var(--border2);
+  color:var(--txt);padding:5px 8px;border-radius:5px;
+  font-size:.78rem;outline:none;font-family:inherit;
+  transition:border-color .15s;
+}
+.month-select:focus{border-color:var(--os-red)}
+
+/* ══════════════════════════════════════════════
+   CALENDAR VIEW
+══════════════════════════════════════════════ */
+.cal-wrap{overflow-x:auto;margin-top:4px}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:3px;min-width:700px;
+}
+.cal-dow-header{
+  text-align:center;padding:7px 4px;
+  font-size:.65rem;font-weight:700;color:var(--txt3);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.cal-day{
+  min-height:78px;padding:5px 5px 4px;
+  background:var(--bg4);border:1px solid var(--border);
+  border-radius:4px;transition:background .1s;
+  position:relative;overflow:hidden;
+}
+.cal-day:hover{background:var(--bg3);border-color:var(--border2)}
+.cal-day.today{border-color:var(--os-red) !important;background:var(--os-red-light)}
+.cal-day.other-month{background:transparent;border-color:transparent;opacity:.3}
+.cal-day.weekend{background:var(--bg2)}
+.cal-day-num{
+  font-size:.72rem;font-weight:700;color:var(--txt2);
+  margin-bottom:3px;line-height:1;
+}
+.cal-day.today .cal-day-num{color:var(--os-red);font-weight:800}
+.cal-tc-item{
+  font-size:.58rem;padding:1px 5px;border-radius:3px;
+  margin-bottom:2px;cursor:default;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.45;
+}
+.cal-tc-item.s-notstarted{background:var(--bg2);     color:var(--txt2); border-left:2px solid var(--txt3)}
+.cal-tc-item.s-inprogress{background:var(--blue-bg); color:var(--blue); border-left:2px solid var(--blue)}
+.cal-tc-item.s-pass      {background:var(--green-bg);color:var(--green);border-left:2px solid var(--green)}
+.cal-tc-item.s-fail      {background:var(--danger-bg);color:var(--os-red);border-left:2px solid var(--os-red)}
+.cal-tc-item.s-blocked   {background:var(--orange-bg);color:var(--orange);border-left:2px solid var(--orange)}
+.cal-tc-item.s-overdue   {background:var(--danger-bg);color:var(--os-red);border-left:2px solid var(--os-red);font-weight:700}
+.cal-tc-item.s-deferred  {background:var(--purple-bg);color:var(--purple);border-left:2px solid var(--purple)}
+.cal-tc-item.s-cancel    {background:var(--bg2);color:var(--txt3);border-left:2px solid var(--txt3);opacity:.65}
+.cal-tc-more{
+  font-size:.58rem;color:var(--txt3);padding:1px 3px;
+  cursor:pointer;
+}
+.cal-tc-more:hover{color:var(--os-red)}
+.cal-legend{
+  display:flex;gap:12px;flex-wrap:wrap;
+  margin-top:12px;padding:8px 14px;
+  background:var(--bg4);border-radius:5px;
+  border:1px solid var(--border);
+}
+.cal-legend-item{
+  display:flex;align-items:center;gap:5px;
+  font-size:.68rem;color:var(--txt2);
+}
+.cal-legend-dot{
+  width:10px;height:10px;border-radius:2px;
+  flex-shrink:0;
+}
+.cal-summary{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));
+  gap:6px;margin-bottom:12px;
+}
+.cal-sum-item{
+  background:var(--bg4);border:1px solid var(--border);
+  border-radius:5px;padding:8px;text-align:center;
+}
+.cal-sum-val{font-size:1.3rem;font-weight:800;line-height:1}
+.cal-sum-lbl{font-size:.6rem;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+
+/* ══════════════════════════════════════════════
+   DATE RANGE SEARCH BAR
+══════════════════════════════════════════════ */
+.date-range-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:var(--bg4);border-radius:6px;
+  padding:9px 14px;margin-bottom:12px;
+  border:1px solid var(--border);
+}
+.date-range-bar label{font-size:.7rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+input[type=date].date-input{
+  background:var(--bg);border:1px solid var(--border2);
+  color:var(--txt);padding:5px 8px;border-radius:5px;
+  font-size:.78rem;outline:none;font-family:inherit;
+  transition:border-color .15s;cursor:pointer;
+  color-scheme:dark;
+}
+[data-theme="light"] input[type=date].date-input{color-scheme:light}
+input[type=date].date-input:focus{border-color:var(--os-red)}
+input[type=date].date-input.active{border-color:var(--green);box-shadow:0 0 0 2px rgba(52,201,122,.15)}
+.date-range-info{
+  font-size:.7rem;padding:3px 9px;border-radius:4px;
+  background:var(--green-bg);color:var(--green);
+  border:1px solid rgba(52,201,122,.3);white-space:nowrap;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<div class="header">
+  <div class="header-logo">🧪</div>
+  <div class="header-info">
+    <div class="header-title">UAT Test Case Progress — Overdue Start Monitor</div>
+    <div class="header-sub">Tracks test cases whose planned start date has passed but have not started</div>
+  </div>
+  <span class="header-badge">SMILE UAT</span>
+  <div class="header-right">
+    <span class="today-chip" id="todayChip">📅 Today: —</span>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark / Light mode" id="themeBtn">🌙</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ══ DATA SOURCE CARD ══ -->
+  <div class="card" id="srcCard">
+    <div class="card-header" onclick="toggleCard('srcCard')">
+      <span class="card-icon blue">📁</span>
+      <span class="card-title">Data Source — Upload Test Case Progress File</span>
+      <span class="toggle-arrow" id="srcArrow">▲</span>
+    </div>
+    <div class="card-body" id="srcBody">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFile(this.files[0])"/>
+        <div class="drop-icon">📊</div>
+        <div class="drop-label">Drag &amp; drop or <span>click to browse</span></div>
+        <div class="drop-label" style="margin-top:4px;font-size:.7rem">Accepts .xlsx, .xls, .csv — Jira, Excel, or manual export</div>
+        <div class="file-name" id="fileName"></div>
+      </div>
+
+      <!-- Column Mapping -->
+      <div id="colMapSection" style="display:none;margin-top:16px">
+        <div class="section-title">Column Mapping</div>
+        <div class="col-map-grid" id="colMapGrid"></div>
+        <div class="map-note" id="mapNote">💡 Auto-detected from column names. Adjust if needed, then click Analyze.</div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="analyzeData()">⚡ Analyze</button>
+          <button class="btn btn-outline" onclick="saveMapping()" title="Save mapping for reuse">💾 Save Mapping</button>
+          <button class="btn btn-outline" onclick="clearSavedMapping()" title="Remove saved mapping">🗑 Clear Saved</button>
+          <button class="btn btn-outline" onclick="clearData()">✕ Reset</button>
+          <span class="save-indicator" id="saveIndicator"><span class="saved-dot"></span> Mapping saved!</span>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div id="previewSection" style="display:none;margin-top:14px">
+        <div class="section-title">Data Preview (first 3 rows)</div>
+        <div class="preview-table-wrap" id="previewWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FILTER CARD ══ -->
+  <div class="card" id="filterCard" style="display:none">
+    <div class="card-header" onclick="toggleCard('filterCard')">
+      <span class="card-icon blue">🔍</span>
+      <span class="card-title">Filter</span>
+      <span class="toggle-arrow" id="filterArrow">▲</span>
+    </div>
+    <div class="card-body" id="filterBody">
+      <div class="filter-section" id="filterSection"></div>
+    </div>
+  </div>
+
+  <!-- ══ KPI ROW ══ -->
+  <div id="kpiRow" style="display:none">
+    <div class="kpi-row">
+      <div class="kpi info">
+        <div class="kpi-val" id="kpiTotal">—</div>
+        <div class="kpi-lbl">Total TCs</div>
+      </div>
+      <div class="kpi danger">
+        <div class="kpi-val" id="kpiOverdue">—</div>
+        <div class="kpi-lbl">Overdue Start</div>
+      </div>
+      <div class="kpi warning">
+        <div class="kpi-val" id="kpiNotStarted">—</div>
+        <div class="kpi-lbl">Not Started</div>
+      </div>
+      <div class="kpi ok">
+        <div class="kpi-val" id="kpiInProgress">—</div>
+        <div class="kpi-lbl">In Progress</div>
+      </div>
+      <div class="kpi ok">
+        <div class="kpi-val" id="kpiPassed">—</div>
+        <div class="kpi-lbl">Passed</div>
+      </div>
+      <div class="kpi purple">
+        <div class="kpi-val" id="kpiMaxOverdue">—</div>
+        <div class="kpi-lbl">Max Days Late</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TOP OVERDUE TABLE ══ -->
+  <div class="card" id="overdueCard" style="display:none">
+    <div class="card-header" onclick="toggleCard('overdueCard')">
+      <span class="card-icon red">🚨</span>
+      <span class="card-title">Top Overdue Start — Test Cases</span>
+      <span class="count-badge red" id="overdueCountBadge">0</span>
+      <button class="btn btn-outline" style="margin-left:auto;padding:4px 11px;font-size:.72rem"
+        onclick="event.stopPropagation();openNotifyModal()" title="Send overdue notification via Outlook or MS Teams">🔔 Notify</button>
+      <span class="toggle-arrow" id="overdueArrow">▲</span>
+    </div>
+    <div class="card-body" id="overdueBody">
+      <!-- Download toolbar -->
+      <div class="dl-toolbar">
+        <span class="dl-label">📥 Export:</span>
+        <button class="btn btn-primary" style="padding:5px 14px;font-size:.78rem"
+          onclick="openSaveAsModal()" title="Preview and save as Excel, PDF, or CSV">💾 Save As…</button>
+        <span style="margin-left:auto;font-size:.7rem;color:var(--txt3)">Preview &amp; export filtered overdue rows</span>
+      </div>
+      <div class="table-wrap">
+        <table id="overdueTable">
+          <thead><tr>
+            <th onclick="sortOd('tcId')">TC ID <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('tcName')">Test Case Name <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('status')">Status <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('tcType')">Custom Field (TC Type) <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('module')">Module <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('assignee')">Assignee <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('startDate')">Start Date <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('actualStart')">Actual Start <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('plannedEnd')">Planned End <span class="sort-arrow"></span></th>
+            <th onclick="sortOd('daysLate')">Days Late <span class="sort-arrow"></span></th>
+          </tr></thead>
+          <tbody id="overdueTbody"></tbody>
+        </table>
+      </div>
+      <div class="pg" id="overduePg"></div>
+    </div>
+  </div>
+
+
+  <!-- ══ MONTHLY SCHEDULE CARD ══ -->
+  <div class="card" id="monthlyCard" style="display:none">
+    <div class="card-header" onclick="toggleCard('monthlyCard')">
+      <span class="card-icon orange">📋</span>
+      <span class="card-title">Monthly Test Case Schedule — Sorted by Start Date</span>
+      <span class="count-badge" id="monthlyCountBadge">0</span>
+      <span class="toggle-arrow" id="monthlyArrow">▲</span>
+    </div>
+    <div class="card-body" id="monthlyBody">
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="prevMonthList()" title="Previous month">&#8249;</button>
+        <span class="month-nav-label" id="monthListLabel">—</span>
+        <button class="month-nav-btn" onclick="nextMonthList()" title="Next month">&#8250;</button>
+        <select class="month-select" id="monthListMonthSel" onchange="onMonthListSelChange()"></select>
+        <select class="month-select" id="monthListYearSel"  onchange="onMonthListSelChange()"></select>
+        <span style="margin-left:auto;font-size:.7rem;color:var(--txt3)">TCs whose planned Start Date falls in the selected month</span>
+      </div>
+      <!-- Date Range Search -->
+      <div class="date-range-bar" id="mlDateRangeBar">
+        <label>📅 Start Date Range</label>
+        <label>From</label>
+        <input type="date" class="date-input" id="mlDateFrom" onchange="onMlDateRangeChange()"/>
+        <label>To</label>
+        <input type="date" class="date-input" id="mlDateTo" onchange="onMlDateRangeChange()"/>
+        <button class="btn btn-outline" style="padding:4px 12px;font-size:.72rem" onclick="clearMlDateRange()">✕ Clear</button>
+        <span class="date-range-info" id="mlDateRangeInfo" style="display:none">📅 Filtering by date range</span>
+        <span style="margin-left:auto;font-size:.7rem;color:var(--txt3)">เลือกช่วงวันเริ่มการทดสอบ (Custom Start Date)</span>
+      </div>
+      <!-- Status filter chips -->
+      <div class="filter-section" style="margin-bottom:12px" id="mlStatusFilter">
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <span class="chip chip-clear active" id="mlChipAll" onclick="clearMlStatusFilt()">✕ All</span>
+          <span class="chip" id="mlChip_notstarted" onclick="toggleMlStatus('notstarted')">Not Started</span>
+          <span class="chip blue" id="mlChip_inprogress" onclick="toggleMlStatus('inprogress')">In Progress</span>
+          <span class="chip green" id="mlChip_pass" onclick="toggleMlStatus('pass')">Pass</span>
+          <span class="chip" id="mlChip_fail" onclick="toggleMlStatus('fail')" style="color:var(--os-red)">Fail</span>
+          <span class="chip orange" id="mlChip_blocked" onclick="toggleMlStatus('blocked')">Blocked</span>
+          <span class="chip" id="mlChip_na" onclick="toggleMlStatus('na')">N/A</span>
+          <span class="chip" id="mlChip_deferred" onclick="toggleMlStatus('deferred')" style="color:var(--purple)">Deferred</span>
+          <span class="chip" id="mlChip_cancel" onclick="toggleMlStatus('cancel')">Cancelled</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="monthlyTable">
+          <thead><tr>
+            <th onclick="sortMonthly('startDate')">Start Date <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('tcId')">TC ID <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('tcName')">Test Case Name <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('status')">Status <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('tcType')">TC Type <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('module')">Module <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('assignee')">Assignee <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('plannedEnd')">Planned End <span class="sort-arrow"></span></th>
+            <th onclick="sortMonthly('daysLate')">Days Late <span class="sort-arrow"></span></th>
+          </tr></thead>
+          <tbody id="monthlyTbody"></tbody>
+        </table>
+      </div>
+      <div class="pg" id="monthlyPg"></div>
+    </div>
+  </div>
+
+  <!-- ══ CALENDAR VIEW CARD ══ -->
+  <div class="card" id="calCard" style="display:none">
+    <div class="card-header" onclick="toggleCard('calCard')">
+      <span class="card-icon purple">📅</span>
+      <span class="card-title">Calendar View — Test Case Start Dates</span>
+      <span class="toggle-arrow" id="calArrow">▲</span>
+    </div>
+    <div class="card-body" id="calBody">
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="prevMonthCal()" title="Previous month">&#8249;</button>
+        <span class="month-nav-label" id="calMonthLabel">—</span>
+        <button class="month-nav-btn" onclick="nextMonthCal()" title="Next month">&#8250;</button>
+        <select class="month-select" id="calMonthSel" onchange="onCalSelChange()"></select>
+        <select class="month-select" id="calYearSel"  onchange="onCalSelChange()"></select>
+        <span style="margin-left:auto;font-size:.7rem;color:var(--txt3)">Each cell shows TCs scheduled to start on that date</span>
+      </div>
+      <!-- Date Range Search -->
+      <div class="date-range-bar" id="calDateRangeBar">
+        <label>📅 Start Date Range</label>
+        <label>From</label>
+        <input type="date" class="date-input" id="calDateFrom" onchange="onCalDateRangeChange()"/>
+        <label>To</label>
+        <input type="date" class="date-input" id="calDateTo" onchange="onCalDateRangeChange()"/>
+        <button class="btn btn-outline" style="padding:4px 12px;font-size:.72rem" onclick="clearCalDateRange()">✕ Clear</button>
+        <span class="date-range-info" id="calDateRangeInfo" style="display:none">📅 Filtering by date range</span>
+        <span style="margin-left:auto;font-size:.7rem;color:var(--txt3)">เลือกช่วงวันเริ่มการทดสอบ (Custom Start Date)</span>
+      </div>
+      <!-- Status filter chips -->
+      <div class="filter-section" style="margin-bottom:12px" id="calStatusFilter">
+        <div class="filter-row">
+          <span class="filter-label">Status</span>
+          <span class="chip chip-clear active" id="calChipAll" onclick="clearCalStatusFilt()">✕ All</span>
+          <span class="chip" id="calChip_notstarted" onclick="toggleCalStatus('notstarted')">Not Started</span>
+          <span class="chip blue" id="calChip_inprogress" onclick="toggleCalStatus('inprogress')">In Progress</span>
+          <span class="chip green" id="calChip_pass" onclick="toggleCalStatus('pass')">Pass</span>
+          <span class="chip" id="calChip_fail" onclick="toggleCalStatus('fail')" style="color:var(--os-red)">Fail</span>
+          <span class="chip orange" id="calChip_blocked" onclick="toggleCalStatus('blocked')">Blocked</span>
+          <span class="chip" id="calChip_na" onclick="toggleCalStatus('na')">N/A</span>
+          <span class="chip" id="calChip_deferred" onclick="toggleCalStatus('deferred')" style="color:var(--purple)">Deferred</span>
+          <span class="chip" id="calChip_cancel" onclick="toggleCalStatus('cancel')">Cancelled</span>
+        </div>
+      </div>
+      <!-- Summary strip -->
+      <div class="cal-summary" id="calSummary"></div>
+      <!-- Calendar grid -->
+      <div class="cal-wrap">
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <!-- Legend -->
+      <div class="cal-legend">
+        <span style="font-size:.68rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;margin-right:4px">Legend:</span>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--bg2);border:1px solid var(--txt3)"></div> Not Started</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--blue-bg);border:1px solid var(--blue)"></div> In Progress</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green-bg);border:1px solid var(--green)"></div> Pass / Done</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--danger-bg);border:1px solid var(--os-red)"></div> Fail / Overdue</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--orange-bg);border:1px solid var(--orange)"></div> Blocked</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════════════════════════════
+     SAVE AS MODAL
+═══════════════════════════════════════════════════════ -->
+<div id="saveAsModal" class="modal-backdrop saveas-modal" style="display:none" onclick="closeSaveAsModal(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span style="font-size:1.2rem">💾</span>
+      <span class="modal-title">Save As — Export Overdue Test Cases</span>
+      <button class="modal-close" onclick="closeSaveAsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Info bar -->
+      <div class="saveas-info-bar" id="saveAsInfoBar">
+        <span>📋</span>
+        <span>Exporting <span class="saveas-row-count" id="saveAsRowCount">0</span> overdue test cases from current filter.</span>
+      </div>
+
+      <!-- Format selector -->
+      <div class="form-label" style="margin-bottom:8px">Select Format</div>
+      <div class="format-cards">
+        <div class="format-card selected" id="fmtExcel" onclick="switchSaveFmt('excel')">
+          <span class="fmt-icon">📊</span>
+          <span class="fmt-name">Excel</span>
+          <span class="fmt-desc">.xlsx · Multi-sheet workbook</span>
+        </div>
+        <div class="format-card" id="fmtCsv" onclick="switchSaveFmt('csv')">
+          <span class="fmt-icon">📄</span>
+          <span class="fmt-name">CSV</span>
+          <span class="fmt-desc">.csv · Universal text format</span>
+        </div>
+        <div class="format-card" id="fmtPdf" onclick="switchSaveFmt('pdf')">
+          <span class="fmt-icon">📑</span>
+          <span class="fmt-name">PDF</span>
+          <span class="fmt-desc">.pdf · Print-ready report</span>
+        </div>
+      </div>
+
+      <!-- Filename -->
+      <div class="form-label" style="margin-bottom:6px">File Name</div>
+      <div class="filename-row">
+        <input class="form-input" id="saveAsFilename" type="text" placeholder="UAT_Overdue_YYYY-MM-DD"/>
+        <span class="filename-ext" id="saveAsExt">.xlsx</span>
+      </div>
+
+      <!-- PDF column options (shown only for PDF) -->
+      <div id="pdfOptsSection" style="display:none">
+        <div class="pdf-cols-wrap">
+          <div class="form-label" style="margin-bottom:0">Columns to Include in PDF</div>
+          <div class="pdf-cols-grid" id="pdfColsGrid"></div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="section-title" style="margin-bottom:8px">Preview <span style="font-weight:400;font-size:.68rem;color:var(--txt3)">(first 10 rows)</span></div>
+      <div class="saveas-preview-wrap" id="saveAsPreviewWrap">
+        <div style="padding:20px;text-align:center;color:var(--txt3);font-size:.78rem">Loading preview…</div>
+      </div>
+
+      <!-- Actions -->
+      <div class="btn-group" style="margin-top:6px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="closeSaveAsModal()">Cancel</button>
+        <button class="btn btn-primary" id="saveAsDownloadBtn" onclick="executeSaveAs()">⬇️ Download</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     NOTIFICATION MODAL — improved
+═══════════════════════════════════════════════════════ -->
+<div id="notifyModal" class="modal-backdrop notify-modal" style="display:none" onclick="closeNotifyModal(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span style="font-size:1.2rem">🔔</span>
+      <span class="modal-title">Send Overdue Notification</span>
+      <div class="notify-header-chips">
+        <span class="notify-chip danger" id="notifyChipOverdue">⚠️ 0 overdue</span>
+        <span class="notify-chip info"   id="notifyChipAssignee">👤 0 assignees</span>
+      </div>
+      <button class="modal-close" onclick="closeNotifyModal()" style="margin-left:8px">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabEmailBtn" onclick="switchNotifyTab('email')">📧 Email (Outlook)</button>
+        <button class="tab-btn" id="tabTeamsBtn"       onclick="switchNotifyTab('teams')">💬 MS Teams</button>
+        <button class="tab-btn" id="tabBothBtn"        onclick="switchNotifyTab('both')">🚀 Send Both</button>
+      </div>
+
+      <!-- ══════════ EMAIL TAB ══════════ -->
+      <div id="tabEmail">
+
+        <!-- Saved Recipients pill input -->
+        <div class="form-group">
+          <label class="form-label">To (Saved Recipients)</label>
+          <div class="recip-pill-row" id="recipPillRow" onclick="document.getElementById('recipInput').focus()">
+            <!-- pills injected by JS -->
+            <input class="recip-pill-input" id="recipInput" type="text"
+              placeholder="Type email &amp; press Enter or comma…"
+              onkeydown="recipKeydown(event)" oninput="recipInputChange(event)"/>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <button class="btn btn-outline" style="padding:3px 10px;font-size:.72rem" onclick="clearRecipients()">🗑 Clear All</button>
+            <span style="font-size:.7rem;color:var(--txt3);margin-top:2px">Recipients are auto-saved in your browser.</span>
+          </div>
+        </div>
+
+        <!-- CC -->
+        <div class="form-group">
+          <label class="form-label">CC (optional)</label>
+          <input class="form-input" id="emailCC" type="text" placeholder="cc@company.com, another@company.com"/>
+        </div>
+
+        <!-- Subject -->
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          <input class="form-input" id="emailSubject" type="text" value="🚨 UAT Overdue Start Alert — SMILE UAT"/>
+        </div>
+
+        <!-- Group-by-assignee toggle -->
+        <div class="form-group" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label class="checkbox-wrap">
+            <input type="checkbox" id="groupByAssignee" onchange="refreshEmailBody()"/>
+            <label for="groupByAssignee">Group overdue list by Assignee</label>
+          </label>
+          <span style="font-size:.7rem;color:var(--txt3)">Adds an assignee breakdown section to the message.</span>
+        </div>
+
+        <!-- Message Body -->
+        <div class="form-group">
+          <label class="form-label">Message Body</label>
+          <textarea class="form-textarea" id="emailBody" style="min-height:160px"></textarea>
+        </div>
+
+        <div style="font-size:.72rem;color:var(--txt3);margin-bottom:10px">
+          💡 <strong>✉️ Send Mail</strong> — downloads a <code>.eml</code> file; open it to launch Outlook with all fields pre-filled (full message, emoji intact).
+          &nbsp;|&nbsp; <strong>📧 Open in Outlook</strong> — quick <code>mailto:</code> link (plain text, may truncate long messages).
+          &nbsp;|&nbsp; <strong>📋 Copy</strong> — copies message to clipboard.
+        </div>
+        <!-- Tip shown after Send Mail download -->
+        <div id="emailSendTip" style="display:none;font-size:.72rem;color:var(--green);
+          background:var(--green-bg);border:1px solid rgba(52,201,122,.3);
+          border-radius:5px;padding:6px 12px;margin-bottom:8px">
+          ✅ <strong>UAT_Overdue_Notification.eml downloaded!</strong>
+          Open the file → Outlook will open it as a compose window → click <strong>Send</strong>.
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-outline" onclick="refreshEmailBody()">🔄 Refresh</button>
+          <button class="btn btn-outline" onclick="copyEmailBody()">📋 Copy Message</button>
+          <button class="btn btn-outline" onclick="sendOutlookEmail()">📧 Open in Outlook</button>
+          <button class="btn btn-primary" onclick="sendMailEml()">✉️ Send Mail</button>
+        </div>
+      </div>
+
+      <!-- ══════════ TEAMS TAB ══════════ -->
+      <div id="tabTeams" style="display:none">
+
+        <!-- Saved channels -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="form-label" style="margin-bottom:0">Teams Channels</div>
+          <button class="btn btn-outline" style="padding:3px 10px;font-size:.72rem" onclick="addTeamsChannel()">＋ Add Channel</button>
+        </div>
+        <div class="channel-list" id="channelList"></div>
+
+        <div style="font-size:.7rem;color:var(--txt3);margin-bottom:12px;line-height:1.55">
+          💡 Paste a <strong>Webhook URL</strong> (…webhook.office.com/…), a <strong>Teams Channel URL</strong> (teams.microsoft.com/l/channel/…), <em>or</em> a <strong>Teams Chat Group URL</strong> (teams.microsoft.com/l/chat/… or /l/groupchat/…).<br>
+          &nbsp;&nbsp;&nbsp;• <strong>🔌 Webhook</strong> — auto-posts the card silently.<br>
+          &nbsp;&nbsp;&nbsp;• <strong>🌐 Channel URL</strong> — copies the message &amp; opens the channel in your browser so you can paste &amp; send.<br>
+          &nbsp;&nbsp;&nbsp;• <strong>💬 Chat Group URL</strong> — copies the message &amp; opens the chat group in your browser so you can paste &amp; send. Use <strong>Send Message</strong> button.<br>
+          Channels &amp; names are auto-saved in your browser.
+        </div>
+
+        <!-- Card preview -->
+        <div class="section-title" style="margin-bottom:8px">Message Preview (Teams Card)</div>
+        <div class="teams-card-preview" id="teamsCardPreview"></div>
+
+        <!-- Per-channel status log -->
+        <div id="teamsSendLog" style="display:none;margin-bottom:10px;font-size:.74rem;
+          background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:10px 12px;
+          display:flex;flex-direction:column;gap:4px"></div>
+
+        <div class="btn-group">
+          <button class="btn btn-outline" onclick="copyTeamsMessage()">📋 Copy Message</button>
+          <button class="btn btn-outline" onclick="openAllTeamsChannels()">🌐 Open All in Browser</button>
+          <button class="btn btn-outline" onclick="sendToAllChannels()">💬 Send to All Channels</button>
+          <button class="btn btn-primary" onclick="sendChatGroupMessage()">💬 Send Message</button>
+        </div>
+      </div>
+
+      <!-- ══════════ BOTH TAB ══════════ -->
+      <div id="tabBoth" style="display:none">
+        <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:16px 18px;text-align:center;margin-bottom:16px">
+          <div style="font-size:1.6rem;margin-bottom:8px">🚀</div>
+          <div style="font-size:.9rem;font-weight:700;color:var(--txt);margin-bottom:6px">Send to Everyone at Once</div>
+          <div style="font-size:.78rem;color:var(--txt2)">
+            This will open Outlook with the email pre-filled <strong>and</strong> send the Teams card
+            to all saved channels simultaneously.
+          </div>
+        </div>
+
+        <!-- Summary list -->
+        <div id="bothSummary" style="margin-bottom:16px;font-size:.8rem;color:var(--txt2)"></div>
+
+        <!-- Combined status -->
+        <div id="bothLog" style="display:none;margin-bottom:12px;font-size:.74rem;
+          background:var(--bg4);border:1px solid var(--border);border-radius:6px;
+          padding:10px 12px;flex-direction:column;gap:5px"></div>
+
+        <div class="btn-group" style="justify-content:center">
+          <button class="btn btn-primary" style="font-size:.88rem;padding:10px 28px"
+            onclick="sendBoth()">🚀 Send Both Now</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  THEME TOGGLE
+// ═══════════════════════════════════════════════════════
+(function(){
+  const saved = localStorage.getItem('os_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('themeBtn').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next    = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '🌙' : '☀️';
+  try { localStorage.setItem('os_theme', next); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS & STATE
+// ═══════════════════════════════════════════════════════
+const TODAY = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
+const MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+
+// Thai public holidays 2025-2026
+const TH_HOL_DEFAULT = [
+  '2025-01-01','2025-02-26','2025-04-06','2025-04-13','2025-04-14','2025-04-15',
+  '2025-05-01','2025-05-22','2025-07-28','2025-07-29','2025-08-12',
+  '2025-10-13','2025-10-14','2025-10-23','2025-12-05','2025-12-10','2025-12-31',
+  '2026-01-01','2026-02-26','2026-04-06','2026-04-13','2026-04-14','2026-04-15',
+  '2026-05-01','2026-07-28','2026-08-12','2026-10-13','2026-10-23','2026-12-05',
+  '2026-12-10','2026-12-31',
+];
+let TH_HOLIDAYS = new Set(TH_HOL_DEFAULT);
+
+const PAGE = 25;
+let odPage = 1;
+let _odSortField = 'daysLate', _odSortDir = -1;
+
+let rawHeaders = [], rawRows = [];
+let allData = [], baseData = [];
+let FILT = { statusNorm: [], tcType: [], module: [], workstream: [] };
+
+// Normalized status display map
+const NORM_META = {
+  notstarted: { label:'Not Started', cls:''        },
+  inprogress: { label:'In Progress', cls:'blue'    },
+  pass:       { label:'Pass',        cls:'green'   },
+  fail:       { label:'Fail',        cls:'red'     },
+  blocked:    { label:'Blocked',     cls:'orange'  },
+  na:         { label:'N/A / Skip',  cls:''        },
+  deferred:   { label:'Deferred',    cls:'purple'  },
+  cancel:     { label:'Cancelled',   cls:''        },
+};
+
+// Column mapping definitions
+const COL_DEFS = [
+  { key:'tcId',       label:'TC ID',              hints:['tc id','test case id','tc_id','testcase id','id','no.','no','#','issue key','key','tc no'] },
+  { key:'tcName',     label:'TC Name / Summary',  hints:['tc name','test case name','summary','description','title','test name','scenario','ชื่อ test case','ชื่อ'] },
+  { key:'module',     label:'Module / Function',  hints:['module/function','custom field (module','cf[module','module','module / function','ส่วน','โมดูล','feature','area','component'] },
+  { key:'tcType',     label:'Custom Field (Test Case Type)', hints:['custom field (test case type)','custom field (test case','cf[test case type]','test case type','tc type','tctype','cf_test_case_type','ประเภท tc','test type','case type'] },
+  { key:'workstream', label:'Workstream',         hints:['workstream','work stream','stream','กลุ่มงาน','work group','ws','work_stream'] },
+  { key:'assignee',   label:'Assignee / Tester',  hints:['assignee','tester','assigned to','owner','ผู้ทดสอบ','responsible','tester name'] },
+  { key:'status',     label:'Status',             hints:['status','result','ผลการทดสอบ','สถานะ','ผล','test result','execution status'] },
+  { key:'priority',   label:'Priority / Severity',hints:['priority','severity','ความสำคัญ','pri','sev'] },
+  // ── Date group: Start ──
+  { key:'startDate',  label:'Start Date',         hints:['start date','start_date','วันเริ่ม','วันที่เริ่ม','jira start','custom start','customfield_start'] },
+  { key:'actualStart',label:'Actual Start Date',  hints:['actual start','actual start date','actual_start','วันเริ่มจริง','actual begin','real start','customfield_actualstart'] },
+  // ── Date group: End / Due ──
+  { key:'plannedEnd', label:'Planned End Date',   hints:['planned end','plan end','due date','deadline','วันสิ้นสุดแผน','planned finish','target date'] },
+  { key:'actualDue',  label:'Actual Due Date',    hints:['actual due','actual end','actual due date','actual_due','วันครบกำหนดจริง','actual finish','actual complete','completion date','customfield_actualdue'] },
+];
+
+// Date group dividers for column mapping UI
+const DATE_GROUP_DIVIDERS = {
+  startDate:  '📅 Start Dates',
+  plannedEnd: '📅 End / Due Dates',
+};
+
+let colMap = {};
+
+// ═══════════════════════════════════════════════════════
+//  DATE UTILITIES
+// ═══════════════════════════════════════════════════════
+function parseDate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  if (!s) return null;
+  let m;
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{2,4})/);
+  if (m) {
+    const mon = MON[m[2].toLowerCase()];
+    if (mon) { const yr = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return new Date(yr, mon-1, +m[1]); }
+  }
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  if (/^\d+$/.test(s) && +s > 40000) return new Date(Date.UTC(1899,11,30) + +s * 86400000);
+  m = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m && +m[3] > 2400) return new Date(+m[3]-543, +m[2]-1, +m[1]);
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function workingDays(start, end) {
+  if (!start || !end) return null;
+  const s = new Date(start); s.setHours(0,0,0,0);
+  const e = new Date(end);   e.setHours(0,0,0,0);
+  if (e <= s) return 0;
+  let n = 0, cur = new Date(s);
+  while (cur < e) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6 && !TH_HOLIDAYS.has(dateStr(cur))) n++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return n;
+}
+
+function dateStr(d) {
+  if (!d) return '';
+  return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`;
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  OVERDUE STATUS LOGIC
+// ═══════════════════════════════════════════════════════
+function normalizeStatus(raw) {
+  if (!raw) return 'notstarted';
+  const v = String(raw).toLowerCase().trim();
+  if (/pass|passed|complete|done|finished|สำเร็จ|ผ่าน/.test(v))        return 'pass';
+  if (/fail|failed|ไม่ผ่าน|reject/.test(v))                            return 'fail';
+  if (/block|blocked|blocker/.test(v))                                  return 'blocked';
+  if (/in.?progress|progress|started|executing|ongoing|กำลัง/.test(v)) return 'inprogress';
+  if (/n\/a|skip|skipped|na|ไม่ทดสอบ/.test(v))                         return 'na';
+  if (/defer|deferred|เลื่อน|postpone/.test(v))                        return 'deferred';
+  if (/cancel|cancelled|canceled|ยกเลิก/.test(v))                      return 'cancel';
+  return 'notstarted';
+}
+
+function computeDaysLate(startDate, actualStart, statusNorm) {
+  if (actualStart) return 0;
+  if (['inprogress','pass','fail'].includes(statusNorm)) return 0;
+  if (!startDate) return 0;
+  if (startDate >= TODAY) return 0;
+  return workingDays(startDate, TODAY) || 0;
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILE HANDLING
+// ═══════════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+
+function handleFile(file) {
+  if (!file) return;
+  document.getElementById('fileName').textContent = '📎 ' + file.name;
+  const reader = new FileReader();
+  if (file.name.toLowerCase().endsWith('.csv')) {
+    reader.onload = e => parseCSV(e.target.result);
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.onload = e => parseXLSX(new Uint8Array(e.target.result));
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const sep = lines[0].includes('\t') ? '\t' : ',';
+  rawHeaders = lines[0].split(sep).map(h => h.replace(/^"|"$/g,'').trim());
+  rawRows = lines.slice(1).map(l => {
+    const vals = l.split(sep).map(v => v.replace(/^"|"$/g,'').trim());
+    const row = {}; rawHeaders.forEach((h,i) => row[h] = vals[i] || '');
+    return row;
+  }).filter(r => Object.values(r).some(v => v));
+  onDataLoaded();
+}
+
+function parseXLSX(buf) {
+  const wb = XLSX.read(buf, {type:'array', cellDates:true});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  if (!data.length) return;
+  rawHeaders = data[0].map(h => String(h||'').trim());
+  rawRows = data.slice(1).filter(r => r.some(v => v !== '')).map(r => {
+    const row = {};
+    rawHeaders.forEach((h,i) => {
+      const v = r[i];
+      if (v instanceof Date) row[h] = dateStr(v);
+      else row[h] = String(v||'').trim();
+    });
+    return row;
+  });
+  onDataLoaded();
+}
+
+// ═══════════════════════════════════════════════════════
+//  COLUMN MAPPING
+// ═══════════════════════════════════════════════════════
+const MAPPING_STORAGE_KEY = 'tc_progress_col_map_v2';
+
+function onDataLoaded() {
+  buildColMap();
+  restoreMapping();
+  buildPreview();
+  document.getElementById('colMapSection').style.display = '';
+  document.getElementById('previewSection').style.display = '';
+}
+
+function saveMapping() {
+  COL_DEFS.forEach(def => {
+    const el = document.getElementById('cm_' + def.key);
+    if (el) colMap[def.key] = el.value;
+  });
+  try { localStorage.setItem(MAPPING_STORAGE_KEY, JSON.stringify(colMap)); } catch(e) {}
+  const ind = document.getElementById('saveIndicator');
+  if (ind) { ind.classList.add('show'); setTimeout(() => ind.classList.remove('show'), 2500); }
+  const note = document.getElementById('mapNote');
+  if (note) note.textContent = '✅ Mapping saved — will auto-apply on next file upload.';
+}
+
+function restoreMapping() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(MAPPING_STORAGE_KEY)); } catch(e) {}
+  if (!saved || typeof saved !== 'object') return;
+  let restored = 0;
+  COL_DEFS.forEach(def => {
+    const savedVal = saved[def.key];
+    if (savedVal && rawHeaders.includes(savedVal)) {
+      colMap[def.key] = savedVal;
+      const el = document.getElementById('cm_' + def.key);
+      if (el) el.value = savedVal;
+      restored++;
+    }
+  });
+  if (restored > 0) {
+    const note = document.getElementById('mapNote');
+    if (note) note.innerHTML = `♻️ Restored ${restored} saved mapping(s). <span style="color:var(--os-red);cursor:pointer;text-decoration:underline" onclick="clearSavedMapping()">Clear saved</span>`;
+  }
+}
+
+function clearSavedMapping() {
+  try { localStorage.removeItem(MAPPING_STORAGE_KEY); } catch(e) {}
+  const note = document.getElementById('mapNote');
+  if (note) note.textContent = '💡 Saved mapping cleared. Auto-detected from column names.';
+}
+
+function autoDetect(hints) {
+  const hn = rawHeaders.map(h => h.toLowerCase());
+  for (const hint of hints) { const idx = hn.findIndex(h => h === hint); if (idx >= 0) return rawHeaders[idx]; }
+  for (const hint of hints) { const idx = hn.findIndex(h => h.includes(hint)); if (idx >= 0) return rawHeaders[idx]; }
+  return '';
+}
+
+function buildColMap() {
+  colMap = {};
+  COL_DEFS.forEach(def => { colMap[def.key] = autoDetect(def.hints); });
+  const grid = document.getElementById('colMapGrid');
+  grid.innerHTML = COL_DEFS.map(def => {
+    const divider = DATE_GROUP_DIVIDERS[def.key]
+      ? `<div class="col-map-divider">${DATE_GROUP_DIVIDERS[def.key]}</div>`
+      : '';
+    const req = def.key === 'status' ? ' <span style="color:var(--os-red)">*</span>' : '';
+    return `${divider}<div class="col-map-item">
+      <label>${def.label}${req}</label>
+      <select id="cm_${def.key}" onchange="colMap['${def.key}']=this.value">
+        <option value="">(not mapped)</option>
+        ${rawHeaders.map(h => `<option value="${esc(h)}" ${colMap[def.key]===h?'selected':''}>${esc(h)}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+}
+
+function buildPreview() {
+  const preview = rawRows.slice(0,3);
+  if (!preview.length) { document.getElementById('previewWrap').innerHTML = '<div style="padding:8px;color:var(--txt3)">No data rows</div>'; return; }
+  const html = `<table><thead><tr>${rawHeaders.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${preview.map(r=>`<tr>${rawHeaders.map(h=>`<td>${esc(String(r[h]||''))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  document.getElementById('previewWrap').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ANALYZE DATA
+// ═══════════════════════════════════════════════════════
+function cv(row, key) {
+  const col = colMap[key];
+  if (!col) return '';
+  return String(row[col] == null ? '' : row[col]).trim();
+}
+
+function analyzeData() {
+  if (!rawRows.length) return;
+  COL_DEFS.forEach(def => {
+    const el = document.getElementById('cm_' + def.key);
+    if (el) colMap[def.key] = el.value;
+  });
+
+  allData = rawRows.map(r => {
+    const startDate   = parseDate(cv(r, 'startDate'));
+    const actualStart = parseDate(cv(r, 'actualStart'));
+    const plannedEnd  = parseDate(cv(r, 'plannedEnd'));
+    const actualDue   = parseDate(cv(r, 'actualDue'));
+    const rawStatus   = cv(r, 'status');
+    const statusNorm  = normalizeStatus(rawStatus);
+    const daysLate    = computeDaysLate(startDate, actualStart, statusNorm);
+    return {
+      tcId:       cv(r, 'tcId'),
+      tcName:     cv(r, 'tcName'),
+      module:     cv(r, 'module'),
+      tcType:     cv(r, 'tcType'),
+      workstream: cv(r, 'workstream'),
+      assignee:   cv(r, 'assignee'),
+      status:     rawStatus, statusNorm,
+      startDate, actualStart, plannedEnd, actualDue,
+      priority:   cv(r, 'priority'),
+      daysLate,
+    };
+  }).filter(d => d.tcId || d.tcName || d.startDate);
+
+  baseData = [...allData];
+  FILT = { statusNorm: [], tcType: [], module: [], workstream: [] };
+
+  buildFilters();
+  updateKPIs();
+  renderOverdueTable();
+
+  ['filterCard','overdueCard','monthlyCard','calCard'].forEach(id => document.getElementById(id).style.display = '');
+  document.getElementById('kpiRow').style.display = '';
+  collapseCard('srcCard');
+
+  // Initialise month selectors & render new sections
+  _mlYear  = TODAY.getFullYear();
+  _mlMonth = TODAY.getMonth();
+  _calYear  = TODAY.getFullYear();
+  _calMonth = TODAY.getMonth();
+  _mlStatusFilt  = [];
+  _calStatusFilt = [];
+  _mlDateFrom = _mlDateTo = _calDateFrom = _calDateTo = null;
+  // Clear date inputs if they exist
+  ['mlDateFrom','mlDateTo','calDateFrom','calDateTo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('active'); }
+  });
+  _initMonthSelectors();
+  _updateMlChips();
+  _updateCalChips();
+  renderMonthlyList();
+  renderCalendar();
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILTERS
+// ═══════════════════════════════════════════════════════
+function buildFilters() {
+  const normOrder   = ['notstarted','inprogress','pass','fail','blocked','na','deferred','cancel'];
+  const activeNorms = normOrder;   // always show all statuses
+  const tcTypes       = [...new Set(allData.map(d => d.tcType).filter(Boolean))].sort();
+  const modules       = [...new Set(allData.map(d => d.module).filter(Boolean))].sort();
+  const workstreams   = [...new Set(allData.map(d => d.workstream).filter(Boolean))].sort();
+
+  const chipRow = (label, ftype, items, getVal, getLabel, clearFn) => `
+    <div class="filter-row">
+      <span class="filter-label">${label}</span>
+      <span class="chip chip-clear" onclick="${clearFn}">✕ All</span>
+      ${items.map(item => {
+        const val = getVal(item), lbl = getLabel(item);
+        const count = allData.filter(d => d[ftype] === val).length;
+        return `<span class="chip" data-ftype="${ftype}" data-fval="${esc(val)}" onclick="toggleFilt('${ftype}','${esc(val)}')">${esc(lbl)} <span style="opacity:.55;font-size:.62rem">(${count})</span></span>`;
+      }).join('')}
+    </div>`;
+
+  document.getElementById('filterSection').innerHTML =
+    // STATUS
+    `<div class="filter-row">
+      <span class="filter-label">STATUS</span>
+      <span class="chip chip-clear" onclick="FILT.statusNorm=[];applyFilters()">✕ All</span>
+      ${activeNorms.map(n => {
+        const m = NORM_META[n] || { label:n, cls:'' };
+        const count = allData.filter(d => d.statusNorm === n).length;
+        return `<span class="chip ${m.cls?'':''}​" data-ftype="statusNorm" data-fval="${n}" onclick="toggleFilt('statusNorm','${n}')">${m.label} <span style="opacity:.55;font-size:.62rem">(${count})</span></span>`;
+      }).join('')}
+    </div>` +
+    // TC TYPE
+    (tcTypes.length ? chipRow('TC TYPE','tcType', tcTypes, t=>t, t=>t, 'FILT.tcType=[];applyFilters()') : '') +
+    // MODULE
+    (modules.length ? chipRow('MODULE','module', modules, m=>m, m=>m, 'FILT.module=[];applyFilters()') : '') +
+    // WORKSTREAM
+    (workstreams.length ? chipRow('WORKSTREAM','workstream', workstreams, w=>w, w=>w, 'FILT.workstream=[];applyFilters()') : '');
+
+}
+
+function toggleFilt(type, val) {
+  const arr = FILT[type];
+  const idx = arr.indexOf(val);
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(val);
+  applyFilters();
+  document.querySelectorAll(`[data-ftype="${type}"]`).forEach(el => {
+    el.classList.toggle('active', FILT[type].includes(el.dataset.fval));
+  });
+}
+
+function applyFilters() {
+  baseData = allData.filter(d => {
+    if (FILT.statusNorm.length && !FILT.statusNorm.includes(d.statusNorm)) return false;
+    if (FILT.tcType.length     && !FILT.tcType.includes(d.tcType))         return false;
+    if (FILT.module.length     && !FILT.module.includes(d.module))         return false;
+    if (FILT.workstream.length && !FILT.workstream.includes(d.workstream)) return false;
+    return true;
+  });
+  odPage = 1;
+  updateKPIs();
+  renderOverdueTable();
+  renderMonthlyList();
+  renderCalendar();
+}
+
+// ═══════════════════════════════════════════════════════
+//  KPIs
+// ═══════════════════════════════════════════════════════
+function updateKPIs() {
+  document.getElementById('kpiTotal').textContent      = baseData.length;
+  document.getElementById('kpiOverdue').textContent    = baseData.filter(d => d.daysLate > 0).length;
+  document.getElementById('kpiNotStarted').textContent = baseData.filter(d => d.statusNorm === 'notstarted').length;
+  document.getElementById('kpiInProgress').textContent = baseData.filter(d => d.statusNorm === 'inprogress').length;
+  document.getElementById('kpiPassed').textContent     = baseData.filter(d => d.statusNorm === 'pass').length;
+  const max = baseData.reduce((m, d) => Math.max(m, d.daysLate), 0);
+  document.getElementById('kpiMaxOverdue').textContent = max ? max + 'd' : '0';
+}
+
+// ═══════════════════════════════════════════════════════
+//  OVERDUE TABLE
+// ═══════════════════════════════════════════════════════
+function renderOverdueTable() {
+  // Filters are applied via the main Filter section (baseData already filtered)
+  let rows = baseData
+    .filter(d => d.daysLate > 0)
+    .sort((a,b) => tableSort(a, b, _odSortField, _odSortDir));
+
+  updateSortHeaders('overdueTable', _odSortField, _odSortDir);
+  document.getElementById('overdueCountBadge').textContent = rows.length;
+
+  const start = (odPage-1)*PAGE, page = rows.slice(start, start+PAGE);
+  const tbody = document.getElementById('overdueTbody');
+
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-cell">✅ No overdue test cases — all start dates are on track!</td></tr>';
+    document.getElementById('overduePg').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = page.map(d => {
+    const sdLbl = d.startDate   ? `<span style="color:var(--orange)">${fmtDate(d.startDate)}</span>`   : '<span class="text-muted">—</span>';
+    const asLbl = d.actualStart ? `<span style="color:var(--green)">${fmtDate(d.actualStart)}</span>`  : '<span class="text-muted">—</span>';
+    const peLbl = d.plannedEnd  ? `<span style="color:var(--txt2)">${fmtDate(d.plannedEnd)}</span>`    : '<span class="text-muted">—</span>';
+    return `<tr class="row-overdue">
+      <td><strong style="color:var(--txt)">${esc(d.tcId||'—')}</strong></td>
+      <td title="${esc(d.tcName)}">${esc((d.tcName||'').substring(0,52))}${d.tcName&&d.tcName.length>52?'…':''}</td>
+      <td>${statusChip(d.statusNorm, d.status)}</td>
+      <td><span style="color:var(--txt2)">${esc(d.tcType||'—')}</span></td>
+      <td><span style="color:var(--txt2)">${esc(d.module||'—')}</span></td>
+      <td>${esc(d.assignee||'—')}</td>
+      <td style="white-space:nowrap">${sdLbl}</td>
+      <td style="white-space:nowrap">${asLbl}</td>
+      <td style="white-space:nowrap">${peLbl}</td>
+      <td><div style="display:flex;align-items:center;gap:5px">
+        <span class="overdue-attn" title="${d.daysLate} working days overdue">!</span>
+        <span class="overdue-badge">${d.daysLate}d late</span>
+      </div></td>
+    </tr>`;
+  }).join('');
+  renderPg('overduePg', Math.ceil(rows.length/PAGE), odPage, p => { odPage=p; renderOverdueTable(); });
+}
+
+
+// ── Status chip ──
+function statusChip(norm, raw) {
+  const cls = {
+    pass:'s-pass', fail:'s-fail', inprogress:'s-inprogress',
+    blocked:'s-blocked', na:'s-na', notstarted:'s-notstarted',
+    deferred:'s-deferred', cancel:'s-cancel'
+  };
+  return `<span class="status-chip ${cls[norm]||'s-notstarted'}">${esc(raw||'Not Started')}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  SORT & PAGINATION
+// ═══════════════════════════════════════════════════════
+function tableSort(a, b, field, dir) {
+  let av = a[field], bv = b[field];
+  if (av instanceof Date) av = av ? av.getTime() : 0;
+  if (bv instanceof Date) bv = bv ? bv.getTime() : 0;
+  if (av == null) av = ''; if (bv == null) bv = '';
+  if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+  return String(av).localeCompare(String(bv)) * dir;
+}
+function sortOd(f) { if (_odSortField===f) _odSortDir*=-1; else {_odSortField=f;_odSortDir=-1;} odPage=1; renderOverdueTable(); }
+
+function updateSortHeaders(tableId, sortField, sortDir) {
+  const tbl = document.getElementById(tableId); if (!tbl) return;
+  tbl.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('asc','desc');
+    const fn = th.getAttribute('onclick');
+    if (fn && fn.includes(`'${sortField}'`)) th.classList.add(sortDir > 0 ? 'asc' : 'desc');
+  });
+}
+
+function renderPg(containerId, totalPages, currentPage, onPage) {
+  const c = document.getElementById(containerId); if (!c) return;
+  if (totalPages <= 1) { c.innerHTML = ''; return; }
+  const from = Math.max(1, currentPage-2), to = Math.min(totalPages, currentPage+2);
+  let html = `<span class="pg-info">Page ${currentPage} / ${totalPages}</span>`;
+  if (from > 1) html += `<button onclick="(${onPage.toString()})(1)">1</button>${from>2?'<span class="text-muted">…</span>':''}`;
+  for (let p = from; p <= to; p++) html += `<button class="${p===currentPage?'active':''}" onclick="(${onPage.toString()})(${p})">${p}</button>`;
+  if (to < totalPages) html += `${to<totalPages-1?'<span class="text-muted">…</span>':''}<button onclick="(${onPage.toString()})(${totalPages})">${totalPages}</button>`;
+  c.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toggleCard(id) {
+  const body = document.getElementById(id.replace('Card','Body'));
+  const arrow = document.getElementById(id.replace('Card','Arrow'));
+  if (!body) return;
+  const col = body.classList.toggle('collapsed');
+  if (arrow) arrow.textContent = col ? '▼' : '▲';
+}
+function collapseCard(id) {
+  const body = document.getElementById(id.replace('Card','Body'));
+  const arrow = document.getElementById(id.replace('Card','Arrow'));
+  if (body) body.classList.add('collapsed');
+  if (arrow) arrow.textContent = '▼';
+}
+function clearData() {
+  rawHeaders=[]; rawRows=[]; allData=[]; baseData=[];
+  document.getElementById('fileName').textContent = '';
+  document.getElementById('colMapSection').style.display = 'none';
+  document.getElementById('previewSection').style.display = 'none';
+  ['filterCard','overdueCard','monthlyCard','calCard'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('kpiRow').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  NOTIFICATION — build message text
+// ═══════════════════════════════════════════════════════
+function buildNotifyText() {
+  const overdue = baseData.filter(d => d.daysLate > 0).sort((a,b) => b.daysLate - a.daysLate);
+  const today   = fmtDate(TODAY);
+  let msg = `🚨 UAT Overdue Start Monitor — SMILE UAT\n`;
+  msg += `📅 Date: ${today}\n\n`;
+  if (!overdue.length) {
+    msg += `✅ No overdue test cases. All start dates are on track!\n`;
+    msg += `Source: SMILE UAT Progress Monitor`;
+    return msg;
+  }
+  msg += `⚠️ ${overdue.length} test case(s) have not started past their planned start date.\n\n`;
+  msg += `TOP OVERDUE (up to 10 shown):\n`;
+  msg += `─────────────────────────────────────────\n`;
+  overdue.slice(0, 10).forEach((d, i) => {
+    msg += `${i + 1}. [${d.tcId || '—'}] ${(d.tcName || '').substring(0, 45)}${(d.tcName || '').length > 45 ? '…' : ''}\n`;
+    msg += `   Module: ${d.module || '—'}  |  Assignee: ${d.assignee || '—'}\n`;
+    msg += `   Plan Start: ${fmtDate(d.startDate)}  →  ⏰ ${d.daysLate} working day(s) late\n\n`;
+  });
+  if (overdue.length > 10) msg += `... and ${overdue.length - 10} more test case(s).\n\n`;
+  msg += `─────────────────────────────────────────\n`;
+  msg += `Please follow up with assignees immediately.\n`;
+  msg += `Source: SMILE UAT Progress Monitor`;
+  return msg;
+}
+
+// ═══════════════════════════════════════════════════════
+//  NOTIFY MODAL — Recipients (localStorage)
+// ═══════════════════════════════════════════════════════
+let _recipients = [];   // [{email}]
+let _channels   = [];   // [{id, name, url}]
+
+function _loadNotifyState() {
+  try { _recipients = JSON.parse(localStorage.getItem('notify_recipients') || '[]'); } catch(e){ _recipients=[]; }
+  try { _channels   = JSON.parse(localStorage.getItem('notify_channels')   || '[]'); } catch(e){ _channels=[]; }
+}
+function _saveNotifyState() {
+  try { localStorage.setItem('notify_recipients', JSON.stringify(_recipients)); } catch(e){}
+  try { localStorage.setItem('notify_channels',   JSON.stringify(_channels));   } catch(e){}
+}
+
+// ─── Modal open / close ───
+function openNotifyModal() {
+  if (!allData.length) { alert('Please analyze data first before sending notification.'); return; }
+  _loadNotifyState();
+  const overdue  = baseData.filter(d => d.daysLate > 0);
+  const assignees = [...new Set(overdue.map(d => d.assignee).filter(Boolean))];
+  document.getElementById('notifyChipOverdue').textContent  = `⚠️ ${overdue.length} overdue`;
+  document.getElementById('notifyChipAssignee').textContent = `👤 ${assignees.length} assignees`;
+
+  // Auto-update subject with count
+  document.getElementById('emailSubject').value =
+    `🚨 UAT Overdue Start Alert — ${overdue.length} TC(s) — SMILE UAT`;
+
+  _renderRecipPills();
+  refreshEmailBody();
+  _renderChannelList();
+  _renderTeamsCardPreview();
+  _renderBothSummary();
+
+  document.getElementById('teamsSendLog').style.display = 'none';
+  document.getElementById('bothLog').style.display      = 'none';
+  switchNotifyTab('email');
+  document.getElementById('notifyModal').style.display  = 'flex';
+}
+function closeNotifyModal(e) {
+  if (!e || e.target.id === 'notifyModal') {
+    document.getElementById('notifyModal').style.display = 'none';
+  }
+}
+function switchNotifyTab(tab) {
+  ['email','teams','both'].forEach(t => {
+    document.getElementById('tabEmail' === 'tab'+t ? 'tabEmail' : (t==='teams'?'tabTeams':'tabBoth'))
+  });
+  document.getElementById('tabEmail').style.display = tab==='email' ? '' : 'none';
+  document.getElementById('tabTeams').style.display = tab==='teams' ? '' : 'none';
+  document.getElementById('tabBoth' ).style.display = tab==='both'  ? '' : 'none';
+  ['Email','Teams','Both'].forEach(n => {
+    const btn = document.getElementById('tab'+n+'Btn');
+    if (btn) btn.classList.toggle('active', tab === n.toLowerCase());
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  RECIPIENT PILLS
+// ═══════════════════════════════════════════════════════
+function _renderRecipPills() {
+  const row   = document.getElementById('recipPillRow');
+  const input = document.getElementById('recipInput');
+  // Remove old pills (keep input)
+  [...row.querySelectorAll('.recip-pill')].forEach(p => p.remove());
+  _recipients.forEach((r, i) => {
+    const pill = document.createElement('span');
+    pill.className = 'recip-pill';
+    pill.innerHTML = `${esc(r.email)} <span class="rm" onclick="removeRecip(${i})">✕</span>`;
+    row.insertBefore(pill, input);
+  });
+}
+function recipKeydown(e) {
+  if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+    e.preventDefault();
+    _addRecipFromInput();
+  } else if (e.key === 'Backspace' && e.target.value === '' && _recipients.length) {
+    _recipients.pop();
+    _saveNotifyState();
+    _renderRecipPills();
+  }
+}
+function recipInputChange(e) {
+  if (e.target.value.endsWith(',')) _addRecipFromInput();
+}
+function _addRecipFromInput() {
+  const val = document.getElementById('recipInput').value.trim().replace(/,+$/, '');
+  if (!val) return;
+  const emails = val.split(/[,;\s]+/).filter(Boolean);
+  emails.forEach(em => {
+    em = em.trim();
+    if (em && !_recipients.find(r => r.email === em)) {
+      _recipients.push({ email: em });
+    }
+  });
+  document.getElementById('recipInput').value = '';
+  _saveNotifyState();
+  _renderRecipPills();
+}
+function removeRecip(i) {
+  _recipients.splice(i, 1);
+  _saveNotifyState();
+  _renderRecipPills();
+}
+function clearRecipients() {
+  _recipients = [];
+  _saveNotifyState();
+  _renderRecipPills();
+}
+
+// ═══════════════════════════════════════════════════════
+//  EMAIL
+// ═══════════════════════════════════════════════════════
+function refreshEmailBody() {
+  document.getElementById('emailBody').value = buildNotifyText();
+}
+function copyEmailBody() {
+  const btn = event.currentTarget;
+  const text = document.getElementById('emailBody').value;
+  const ok = () => { btn.textContent='✅ Copied!'; setTimeout(()=>btn.textContent='📋 Copy Message',2500); };
+  navigator.clipboard ? navigator.clipboard.writeText(text).then(ok).catch(()=>_fallbackCopyText(text,ok)) : _fallbackCopyText(text,ok);
+}
+function _fallbackCopyText(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+  document.body.removeChild(ta); if (cb) cb();
+}
+// ── "Send Mail" button — creates a .eml file → opens in Outlook as compose draft ──
+function sendMailEml() {
+  _addRecipFromInput();
+  if (!_recipients.length) {
+    alert('Please add at least one recipient email address before sending.');
+    return;
+  }
+  const toList  = _recipients.map(r => r.email).join(', ');
+  const cc      = document.getElementById('emailCC').value.trim();
+  const subject = document.getElementById('emailSubject').value || '🚨 UAT Overdue Start Alert — SMILE UAT';
+  const body    = document.getElementById('emailBody').value || buildNotifyText();
+
+  // Build RFC 2822 .eml — X-Unsent:1 tells Outlook to open as a NEW compose window
+  const lines = [
+    `To: ${toList}`,
+    cc ? `Cc: ${cc}` : null,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `X-Unsent: 1`,
+    `Content-Type: text/plain; charset=UTF-8`,
+    `Content-Transfer-Encoding: 8bit`,
+    ``,
+    body
+  ].filter(l => l !== null).join('\r\n');
+
+  try {
+    const blob = new Blob([lines], { type: 'message/rfc822' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = 'UAT_Overdue_Notification.eml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+    // Show tip
+    const tip = document.getElementById('emailSendTip');
+    if (tip) { tip.style.display = 'block'; setTimeout(() => tip.style.display = 'none', 7000); }
+  } catch(err) {
+    alert('Could not create email file: ' + err.message);
+  }
+}
+
+// ── "Open in Outlook" button — mailto: with emoji stripped to stay under URL limits ──
+function sendOutlookEmail() {
+  _addRecipFromInput();
+  if (!_recipients.length) {
+    alert('Please add at least one recipient email address before sending.');
+    return;
+  }
+  const toList  = _recipients.map(r => r.email).join(';');
+  const cc      = document.getElementById('emailCC').value.trim();
+
+  // Strip emoji & non-ASCII so encodeURIComponent doesn't inflate the URL
+  const clean = s => s.replace(/[^\u0000-\u007F]/g, '').replace(/\s+/g, ' ').trim();
+  const subject = clean(document.getElementById('emailSubject').value || 'UAT Overdue Start Alert - SMILE UAT');
+  const bodyRaw = clean(document.getElementById('emailBody').value || buildNotifyText());
+
+  // Keep well under browser mailto: URL limits (~1500 clean chars)
+  const MAX = 1500;
+  const body = bodyRaw.length > MAX
+    ? bodyRaw.substring(0, MAX) + '\n\n[...truncated — use the "Send Mail" button for full content]'
+    : bodyRaw;
+
+  let mailto = `mailto:${toList}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (cc) mailto += `&cc=${encodeURIComponent(cc)}`;
+
+  const a = document.createElement('a');
+  a.href = mailto;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TEAMS CHANNELS
+// ═══════════════════════════════════════════════════════
+function _renderChannelList() {
+  const list = document.getElementById('channelList');
+  if (!_channels.length) {
+    list.innerHTML = `<div style="font-size:.78rem;color:var(--txt3);padding:8px;font-style:italic">
+      No channels saved yet. Click <strong>+ Add Channel</strong> to add one.</div>`;
+    return;
+  }
+  list.innerHTML = _channels.map((ch, i) => {
+    const t = ch.type || 'webhook';
+    const isTeamsUrl  = t === 'teams_url';
+    const isTeamsChat = t === 'teams_chat';
+    const badge = isTeamsUrl
+      ? `<span class="ch-type-badge teams_url">🌐 Web</span>`
+      : isTeamsChat
+        ? `<span class="ch-type-badge teams_chat">💬 Chat</span>`
+        : `<span class="ch-type-badge webhook">🔌 Hook</span>`;
+    const openBtn = isTeamsUrl
+      ? `<button class="btn btn-outline" style="padding:3px 8px;font-size:.7rem;flex-shrink:0" onclick="openTeamsChannel(${i})" title="Copy message &amp; open channel in browser">🌐</button>`
+      : isTeamsChat
+        ? `<button class="btn btn-outline" style="padding:3px 8px;font-size:.7rem;flex-shrink:0" onclick="openTeamsChannel(${i})" title="Copy message &amp; open chat group in browser">💬</button>`
+        : '';
+    return `
+    <div class="channel-card" id="ch-${i}">
+      <label class="checkbox-wrap" style="flex-shrink:0">
+        <input type="checkbox" id="chk-${i}" ${ch.enabled!==false?'checked':''} onchange="_toggleChannel(${i},this.checked)"/>
+        <label for="chk-${i}" style="display:none"></label>
+      </label>
+      ${badge}
+      <input class="channel-name-input" id="chn-${i}" value="${esc(ch.name||'Channel '+(i+1))}"
+        onchange="_updateChannelName(${i},this.value)" style="width:100px;flex-shrink:0"/>
+      <input class="channel-url-input" id="chu-${i}" value="${esc(ch.url||'')}"
+        placeholder="Webhook URL or teams.microsoft.com/l/channel/…"
+        onchange="_updateChannelUrl(${i},this.value)"/>
+      <span class="channel-status" id="chs-${i}">—</span>
+      ${openBtn}
+      <button class="btn btn-outline" style="padding:3px 8px;font-size:.7rem;flex-shrink:0" onclick="removeChannel(${i})">🗑</button>
+    </div>`;
+  }).join('');
+}
+function addTeamsChannel() {
+  _channels.push({ id: Date.now(), name: 'Channel '+ (_channels.length+1), url: '', type: 'webhook', enabled: true });
+  _saveNotifyState();
+  _renderChannelList();
+}
+function removeChannel(i) {
+  _channels.splice(i, 1);
+  _saveNotifyState();
+  _renderChannelList();
+}
+function _toggleChannel(i, v) { _channels[i].enabled = v; _saveNotifyState(); }
+function _updateChannelName(i, v) { _channels[i].name = v; _saveNotifyState(); }
+function _updateChannelUrl(i, v)  {
+  _channels[i].url  = v;
+  // Auto-detect type from URL
+  _channels[i].type = _detectChannelType(v);
+  _saveNotifyState();
+  _renderChannelList();  // re-render to show updated badge + open button
+}
+function _detectChannelType(url) {
+  if (!url) return 'webhook';
+  if (url.includes('teams.microsoft.com/l/channel')) return 'teams_url';
+  if (url.includes('teams.microsoft.com/l/chat') || url.includes('teams.microsoft.com/l/groupchat')) return 'teams_chat';
+  return 'webhook';
+}
+
+// ─── Teams card preview (rendered HTML) ───
+function _renderTeamsCardPreview() {
+  const overdue = baseData.filter(d => d.daysLate > 0).sort((a,b) => b.daysLate - a.daysLate);
+  const today   = fmtDate(TODAY);
+  const top     = overdue.slice(0, 5);
+  const preview = document.getElementById('teamsCardPreview');
+  if (!overdue.length) {
+    preview.innerHTML = `<div class="tcp-title">✅ UAT Overdue Monitor — SMILE UAT</div>
+      <div class="tcp-sub">📅 ${today}</div>
+      <div style="color:var(--green);font-size:.8rem;margin-top:6px">All test cases are on track!</div>`;
+    return;
+  }
+  let rows = top.map(d => `
+    <div class="tcp-fact">
+      <span class="tcp-fact-name">${esc(d.tcId||'—')}</span>
+      <span class="tcp-fact-val">${esc((d.tcName||'').substring(0,40))} &nbsp;|&nbsp;
+        ${esc(d.assignee||'—')} &nbsp;|&nbsp; <strong style="color:var(--os-red)">${d.daysLate}d late</strong></span>
+    </div>`).join('');
+  if (overdue.length > 5) rows += `<div class="tcp-more">…and ${overdue.length-5} more test case(s). Full list attached.</div>`;
+  const byAssignee = {};
+  overdue.forEach(d => { const a = d.assignee||'Unassigned'; (byAssignee[a]=byAssignee[a]||[]).push(d); });
+  const assigneeRows = Object.entries(byAssignee).slice(0,5).map(([a,ds]) =>
+    `<div class="tcp-fact"><span class="tcp-fact-name">${esc(a)}</span>
+     <span class="tcp-fact-val">${ds.length} TC(s) overdue</span></div>`).join('');
+  preview.innerHTML = `
+    <div class="tcp-title">🚨 UAT Overdue Start Monitor — SMILE UAT</div>
+    <div class="tcp-sub">📅 ${today} &nbsp;|&nbsp; ⚠️ ${overdue.length} TC(s) past planned start date</div>
+    ${rows}
+    <div style="margin-top:10px;margin-bottom:4px;font-size:.72rem;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.4px">By Assignee</div>
+    ${assigneeRows}
+    <div class="tcp-more" style="margin-top:8px">Please follow up with assignees immediately.</div>`;
+}
+
+// ─── Build Teams MessageCard payload ───
+function _buildTeamsPayload() {
+  const overdue = baseData.filter(d => d.daysLate > 0).sort((a,b) => b.daysLate - a.daysLate);
+  const today   = fmtDate(TODAY);
+  const byAssignee = {};
+  overdue.forEach(d => { const a = d.assignee||'Unassigned'; (byAssignee[a]=byAssignee[a]||[]).push(d); });
+
+  const topFacts = overdue.slice(0,10).map(d => ({
+    name : `${d.tcId||'—'}  (${d.daysLate}d late)`,
+    value: `${(d.tcName||'—').substring(0,50)} | Module: ${d.module||'—'} | Assignee: ${d.assignee||'—'}`
+  }));
+  const assigneeFacts = Object.entries(byAssignee).slice(0,10).map(([a,ds]) => ({
+    name : a,
+    value: `${ds.length} TC(s) overdue — max ${Math.max(...ds.map(d=>d.daysLate))}d late`
+  }));
+
+  const sections = overdue.length ? [
+    { title:'⚠️ Top Overdue Test Cases', facts: topFacts },
+    ...(overdue.length > 10 ? [{ text:`_...and ${overdue.length-10} more test case(s). Please check the full monitor._` }] : []),
+    { title:'👤 Overdue by Assignee', facts: assigneeFacts },
+    { text:'_Please follow up with assignees immediately and update the test case schedule._' }
+  ] : [{ text:'✅ All test cases are on track!' }];
+
+  return {
+    '@type'   : 'MessageCard',
+    '@context': 'https://schema.org/extensions',
+    themeColor: 'E83D2A',
+    summary   : `UAT Overdue Alert — ${overdue.length} TC(s) — SMILE UAT`,
+    title     : '🚨 UAT Overdue Start Monitor — SMILE UAT',
+    text      : `**${overdue.length}** test case(s) have not started past their planned start date as of **${today}**.`,
+    sections
+  };
+}
+
+function copyTeamsMessage() {
+  const btn  = event.currentTarget;
+  const text = buildNotifyText();
+  const ok   = () => { btn.textContent='✅ Copied!'; setTimeout(()=>btn.textContent='📋 Copy Message',2500); };
+  navigator.clipboard ? navigator.clipboard.writeText(text).then(ok).catch(()=>_fallbackCopyText(text,ok)) : _fallbackCopyText(text,ok);
+}
+
+async function _postToChannel(ch) {
+  const url  = (ch.url||'').trim();
+  const type = ch.type || _detectChannelType(url);
+  if (!url) return { ok:false, msg:'No URL configured' };
+
+  // ── Teams Channel URL or Chat Group URL (web browser) path ──
+  if (type === 'teams_url' || type === 'teams_chat') {
+    const text = buildNotifyText();
+    try {
+      if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      else _fallbackCopyText(text, ()=>{});
+    } catch(e) { _fallbackCopyText(text, ()=>{}); }
+    window.open(url, '_blank');
+    const label = type === 'teams_chat' ? 'chat group' : 'channel';
+    return { ok:true, msg:`Opened ${label} in browser — paste (Ctrl+V) to send 📋` };
+  }
+
+  // ── Webhook (incoming webhook) path ──
+  _channels[_channels.indexOf(ch)].url = url;
+  _saveNotifyState();
+  try {
+    const resp = await fetch(url, {
+      method :'POST', headers:{'Content-Type':'application/json'},
+      body   : JSON.stringify(_buildTeamsPayload())
+    });
+    if (resp.ok || resp.status===200) return { ok:true,  msg:'Sent ✅' };
+    const txt = await resp.text().catch(()=>'');
+    return { ok:false, msg:`HTTP ${resp.status} — ${txt.substring(0,60)}` };
+  } catch(err) {
+    if (err.name==='TypeError') return { ok:false, msg:'CORS / network error — use Power Automate or try the Channel URL method.' };
+    return { ok:false, msg:`Error: ${err.message}` };
+  }
+}
+
+// Open a single Teams channel URL (web) — copy message first
+async function openTeamsChannel(i) {
+  const ch = _channels[i];
+  const url = (ch && ch.url || '').trim();
+  if (!url) return;
+  const text = buildNotifyText();
+  try {
+    if (navigator.clipboard) await navigator.clipboard.writeText(text);
+    else _fallbackCopyText(text, ()=>{});
+  } catch(e) { _fallbackCopyText(text, ()=>{}); }
+  const statEl = document.getElementById(`chs-${i}`);
+  if (statEl) { statEl.textContent='📋 Copied & opened'; statEl.className='channel-status ok'; }
+  window.open(url, '_blank');
+}
+
+// Open ALL Teams channel-URL type channels in browser
+async function openAllTeamsChannels() {
+  const webChannels = _channels.filter(c => c.enabled !== false && _detectChannelType(c.url) === 'teams_url');
+  if (!webChannels.length) { alert('No browser-type channels (teams.microsoft.com URL) found. Add a Teams channel URL first.'); return; }
+  const text = buildNotifyText();
+  try {
+    if (navigator.clipboard) await navigator.clipboard.writeText(text);
+    else _fallbackCopyText(text, ()=>{});
+  } catch(e) { _fallbackCopyText(text, ()=>{}); }
+  const log = document.getElementById('teamsSendLog');
+  log.style.display = 'flex';
+  log.innerHTML = `<div style="color:var(--green)">📋 Message copied to clipboard!</div>`;
+  webChannels.forEach((ch, idx) => {
+    setTimeout(() => {
+      window.open(ch.url, '_blank');
+      const d = document.createElement('div');
+      d.innerHTML = `🌐 Opened <strong>${esc(ch.name)}</strong> — paste &amp; send in the browser tab`;
+      log.appendChild(d);
+      // Update badge
+      const chIdx = _channels.indexOf(ch);
+      const statEl = document.getElementById(`chs-${chIdx}`);
+      if (statEl) { statEl.textContent='✅ Opened'; statEl.className='channel-status ok'; }
+    }, idx * 600);  // stagger so browser doesn't block pop-ups
+  });
+}
+
+// Send message to all enabled Teams Chat Group (teams_chat) channels
+async function sendChatGroupMessage() {
+  const chatChannels = _channels.filter(c => c.enabled !== false && _detectChannelType(c.url) === 'teams_chat');
+  if (!chatChannels.length) {
+    alert('No Teams Chat Group found. Add a Chat Group URL (teams.microsoft.com/l/chat/… or /l/groupchat/…) first.');
+    return;
+  }
+  const text = buildNotifyText();
+  try {
+    if (navigator.clipboard) await navigator.clipboard.writeText(text);
+    else _fallbackCopyText(text, ()=>{});
+  } catch(e) { _fallbackCopyText(text, ()=>{}); }
+  const log = document.getElementById('teamsSendLog');
+  log.style.display = 'flex';
+  log.innerHTML = `<div style="color:var(--green)">📋 Message copied to clipboard! Opening chat group(s)…</div>`;
+  chatChannels.forEach((ch, idx) => {
+    setTimeout(() => {
+      window.open(ch.url, '_blank');
+      const d = document.createElement('div');
+      d.innerHTML = `💬 Opened chat <strong>${esc(ch.name)}</strong> — paste (Ctrl+V) &amp; send`;
+      log.appendChild(d);
+      const chIdx = _channels.indexOf(ch);
+      const statEl = document.getElementById(`chs-${chIdx}`);
+      if (statEl) { statEl.textContent='✅ Opened'; statEl.className='channel-status ok'; }
+    }, idx * 600);
+  });
+}
+
+async function sendToAllChannels() {
+  const enabled = _channels.filter(c => c.enabled !== false);
+  if (!enabled.length) { alert('No channels enabled. Add or enable at least one webhook channel.'); return; }
+  const log = document.getElementById('teamsSendLog');
+  log.style.display = 'flex';
+  log.innerHTML = enabled.map(c=>`<div id="log-${c.id||c.name}">⏳ Sending to <strong>${esc(c.name)}</strong>…</div>`).join('');
+  // Update channel status badges too
+  for (const ch of enabled) {
+    const idx = _channels.indexOf(ch);
+    const statEl = document.getElementById(`chs-${idx}`);
+    if (statEl) { statEl.textContent='⏳ sending…'; statEl.className='channel-status sending'; }
+    const res = await _postToChannel(ch);
+    if (statEl) {
+      statEl.textContent = res.ok ? '✅ Sent' : '❌ Failed';
+      statEl.className   = `channel-status ${res.ok?'ok':'err'}`;
+    }
+    const logEl = log.querySelector(`#log-${ch.id||ch.name}`);
+    if (logEl) logEl.innerHTML = `${res.ok?'✅':'❌'} <strong>${esc(ch.name)}</strong>: ${esc(res.msg)}`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SEND BOTH
+// ═══════════════════════════════════════════════════════
+function _renderBothSummary() {
+  const el      = document.getElementById('bothSummary');
+  const toList  = _recipients.map(r=>r.email).join(', ') || '(no recipients saved)';
+  const chList  = _channels.filter(c=>c.enabled!==false).map(c=>c.name).join(', ') || '(no channels)';
+  el.innerHTML  = `
+    <div style="margin-bottom:6px">📧 <strong>Email to:</strong> ${esc(toList)}</div>
+    <div>💬 <strong>Teams channels:</strong> ${esc(chList)}</div>`;
+}
+async function sendBoth() {
+  const log = document.getElementById('bothLog');
+  log.style.display = 'flex'; log.innerHTML = '';
+  // 1. Outlook
+  const append = msg => { const d=document.createElement('div'); d.innerHTML=msg; log.appendChild(d); };
+  append('📧 Preparing email (.eml)…');
+  sendMailEml();
+  append('✅ <strong>UAT_Overdue_Notification.eml</strong> downloaded — open it, then click <em>Send</em> in Outlook.');
+  // 2. Teams
+  const enabled = _channels.filter(c=>c.enabled!==false);
+  if (enabled.length) {
+    append(`💬 Sending to ${enabled.length} Teams channel(s)…`);
+    for (const ch of enabled) {
+      const res = await _postToChannel(ch);
+      append(`${res.ok?'✅':'❌'} <strong>${esc(ch.name)}</strong>: ${esc(res.msg)}`);
+    }
+  } else {
+    append('⚠️ No Teams channels configured — skipped.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DOWNLOAD FUNCTIONS
+// ═══════════════════════════════════════════════════════
+function getExportRows() {
+  return baseData.filter(d => d.daysLate > 0).sort((a,b) => b.daysLate - a.daysLate);
+}
+const EXPORT_COLS = ['TC ID','TC Name','Status','TC Type','Module','Workstream','Assignee',
+                     'Plan Start','Actual Start','Plan End','Days Late'];
+function rowToArr(d) {
+  return [d.tcId, d.tcName, d.status, d.tcType, d.module, d.workstream, d.assignee,
+          fmtDate(d.startDate), fmtDate(d.actualStart), fmtDate(d.plannedEnd), d.daysLate];
+}
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+// ─── CSV ───
+function downloadCSV() {
+  const rows = getExportRows();
+  if (!rows.length) { alert('No overdue test cases to export.'); return; }
+  const csv = [EXPORT_COLS, ...rows.map(rowToArr)]
+    .map(r => r.map(v => `"${String(v==null?'':v).replace(/"/g,'""')}"`).join(','))
+    .join('\r\n');
+  triggerDownload(
+    new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8;' }),
+    `UAT_Overdue_${dateStr(TODAY)}.csv`
+  );
+}
+
+// ─── Excel ───
+function downloadExcel() {
+  const rows = getExportRows();
+  if (!rows.length) { alert('No overdue test cases to export.'); return; }
+  const wb   = XLSX.utils.book_new();
+  const ws   = XLSX.utils.aoa_to_sheet([EXPORT_COLS, ...rows.map(rowToArr)]);
+  ws['!cols'] = [12,40,15,18,18,18,22,14,14,14,12].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'Overdue TCs');
+  XLSX.writeFile(wb, `UAT_Overdue_${dateStr(TODAY)}.xlsx`);
+}
+
+// ─── PDF ───
+function downloadPDF() {
+  const rows = getExportRows();
+  if (!rows.length) { alert('No overdue test cases to export.'); return; }
+  if (!window.jspdf) { alert('PDF library is still loading — please wait a moment and try again.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+
+  // Title
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.setTextColor(232, 61, 42);
+  doc.text('UAT Test Case Progress — Overdue Start Monitor', 14, 16);
+
+  // Sub-title
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8);
+  doc.setTextColor(90, 116, 144);
+  doc.text(
+    `Generated: ${fmtDate(TODAY)}   |   Total Overdue: ${rows.length}   |   SMILE UAT`,
+    14, 23
+  );
+
+  // Table (7 key columns for landscape A4)
+  doc.autoTable({
+    startY   : 28,
+    head     : [['TC ID','TC Name','Status','Module','Assignee','Plan Start','Days Late']],
+    body     : rows.map(d => [
+      d.tcId || '—',
+      (d.tcName || '').substring(0, 50),
+      d.status  || '—',
+      d.module  || '—',
+      d.assignee|| '—',
+      fmtDate(d.startDate),
+      d.daysLate + 'd'
+    ]),
+    theme    : 'grid',
+    styles   : { fontSize:7.5, cellPadding:2.5, textColor:[30,43,60] },
+    headStyles: { fillColor:[232,61,42], textColor:255, fontStyle:'bold', fontSize:8 },
+    alternateRowStyles: { fillColor:[244,247,251] },
+    columnStyles: {
+      0: { cellWidth:22 }, 1: { cellWidth:76 }, 2: { cellWidth:24 },
+      3: { cellWidth:34 }, 4: { cellWidth:34 }, 5: { cellWidth:22 }, 6: { cellWidth:18 }
+    }
+  });
+
+  // Page footer
+  const pages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(6.5); doc.setTextColor(180,180,180);
+    doc.text(
+      `SMILE UAT Overdue Monitor  |  Page ${p} of ${pages}`,
+      14, doc.internal.pageSize.height - 7
+    );
+  }
+
+  doc.save(`UAT_Overdue_${dateStr(TODAY)}.pdf`);
+}
+
+// ═══════════════════════════════════════════════════════
+//  SAVE AS MODAL
+// ═══════════════════════════════════════════════════════
+let _saveAsFmt = 'excel';
+
+// All exportable columns with display labels
+const ALL_EXPORT_COLS = [
+  { key:'tcId',       label:'TC ID'        },
+  { key:'tcName',     label:'TC Name'      },
+  { key:'status',     label:'Status'       },
+  { key:'tcType',     label:'TC Type'      },
+  { key:'module',     label:'Module'       },
+  { key:'workstream', label:'Workstream'   },
+  { key:'assignee',   label:'Assignee'     },
+  { key:'startDate',  label:'Plan Start',  fmt:true },
+  { key:'actualStart',label:'Actual Start',fmt:true },
+  { key:'plannedEnd', label:'Plan End',    fmt:true },
+  { key:'daysLate',   label:'Days Late'    },
+];
+
+// PDF-specific: cols selected by checkbox
+let _pdfColSel = new Set(ALL_EXPORT_COLS.map(c=>c.key));
+
+function openSaveAsModal() {
+  const rows = getExportRows();
+  document.getElementById('saveAsRowCount').textContent = rows.length;
+  document.getElementById('saveAsFilename').value = `UAT_Overdue_${dateStr(TODAY)}`;
+  _saveAsFmt = 'excel';
+  _updateFmtCards();
+  _buildPdfColsGrid();
+  _renderSaveAsPreview();
+  document.getElementById('saveAsModal').style.display = 'flex';
+}
+
+function closeSaveAsModal(evt) {
+  if (evt && evt.target !== document.getElementById('saveAsModal')) return;
+  document.getElementById('saveAsModal').style.display = 'none';
+}
+
+function switchSaveFmt(fmt) {
+  _saveAsFmt = fmt;
+  _updateFmtCards();
+  _renderSaveAsPreview();
+}
+
+function _updateFmtCards() {
+  ['excel','csv','pdf'].forEach(f => {
+    const el = document.getElementById('fmt' + f.charAt(0).toUpperCase() + f.slice(1));
+    el.classList.toggle('selected', f === _saveAsFmt);
+  });
+  const extMap = { excel:'.xlsx', csv:'.csv', pdf:'.pdf' };
+  document.getElementById('saveAsExt').textContent = extMap[_saveAsFmt];
+  document.getElementById('pdfOptsSection').style.display = _saveAsFmt === 'pdf' ? '' : 'none';
+}
+
+function _buildPdfColsGrid() {
+  const grid = document.getElementById('pdfColsGrid');
+  grid.innerHTML = ALL_EXPORT_COLS.map(c => `
+    <label class="checkbox-wrap">
+      <input type="checkbox" value="${c.key}" ${_pdfColSel.has(c.key)?'checked':''}
+        onchange="_togglePdfCol('${c.key}',this.checked)">
+      <label style="cursor:pointer">${c.label}</label>
+    </label>`).join('');
+}
+
+function _togglePdfCol(key, checked) {
+  checked ? _pdfColSel.add(key) : _pdfColSel.delete(key);
+  if (_saveAsFmt === 'pdf') _renderSaveAsPreview();
+}
+
+function _getActiveCols() {
+  if (_saveAsFmt === 'pdf') {
+    return ALL_EXPORT_COLS.filter(c => _pdfColSel.has(c.key));
+  }
+  return ALL_EXPORT_COLS;
+}
+
+function _renderSaveAsPreview() {
+  const wrap = document.getElementById('saveAsPreviewWrap');
+  const rows = getExportRows().slice(0, 10);
+  if (!rows.length) {
+    wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--txt3);font-style:italic">No overdue rows to preview.</div>';
+    return;
+  }
+  const cols = _getActiveCols();
+  const thead = `<thead><tr>${cols.map(c=>`<th>${esc(c.label)}</th>`).join('')}</tr></thead>`;
+  const tbody = `<tbody>${rows.map(r => {
+    return `<tr>${cols.map(c => {
+      let val = r[c.key];
+      if (c.fmt && val instanceof Date) val = fmtDate(val);
+      else if (val == null || val === '') val = '—';
+      return `<td>${esc(String(val))}</td>`;
+    }).join('')}</tr>`;
+  }).join('')}</tbody>`;
+  wrap.innerHTML = `<table>${thead}${tbody}</table>`;
+}
+
+function executeSaveAs() {
+  const baseName = (document.getElementById('saveAsFilename').value || `UAT_Overdue_${dateStr(TODAY)}`).trim();
+  if (_saveAsFmt === 'csv')   { _saveAsCsv(baseName);   return; }
+  if (_saveAsFmt === 'excel') { _saveAsExcel(baseName); return; }
+  if (_saveAsFmt === 'pdf')   { _saveAsPdf(baseName);   return; }
+}
+
+function _saveAsCsv(base) {
+  const rows = getExportRows();
+  if (!rows.length) { alert('No overdue test cases to export.'); return; }
+  const cols = ALL_EXPORT_COLS;
+  const csv = [cols.map(c=>c.label), ...rows.map(r =>
+    cols.map(c => { let v = r[c.key]; if (c.fmt && v instanceof Date) v = fmtDate(v); return v==null?'':v; })
+  )].map(row => row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  triggerDownload(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}), base+'.csv');
+  document.getElementById('saveAsModal').style.display = 'none';
+}
+
+function _saveAsExcel(base) {
+  const rows = getExportRows();
+  if (!rows.length) { alert('No overdue test cases to export.'); return; }
+  const cols = ALL_EXPORT_COLS;
+  const ws   = XLSX.utils.aoa_to_sheet([
+    cols.map(c=>c.label),
+    ...rows.map(r => cols.map(c=>{ let v=r[c.key]; if(c.fmt&&v instanceof Date) v=fmtDate(v); return v==null?'':v; }))
+  ]);
+  ws['!cols'] = [12,40,15,18,18,18,22,14,14,14,12].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Overdue TCs');
+  XLSX.writeFile(wb, base+'.xlsx');
+  document.getElementById('saveAsModal').style.display = 'none';
+}
+
+function _saveAsPdf(base) {
+  const rows = getExportRows();
+  if (!rows.length) { alert('No overdue test cases to export.'); return; }
+  if (!window.jspdf) { alert('PDF library is still loading — please wait a moment and try again.'); return; }
+  const { jsPDF } = window.jspdf;
+  const cols = _getActiveCols();
+  const doc  = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(13);
+  doc.setTextColor(232,61,42);
+  doc.text('UAT Test Case Progress — Overdue Start Monitor', 14, 16);
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8);
+  doc.setTextColor(90,116,144);
+  doc.text(`Generated: ${fmtDate(TODAY)}   |   Total Overdue: ${rows.length}   |   SMILE UAT`, 14, 23);
+
+  const pageW = doc.internal.pageSize.width - 28;
+  const colW  = Math.floor(pageW / cols.length);
+
+  doc.autoTable({
+    startY    : 28,
+    head      : [cols.map(c=>c.label)],
+    body      : rows.map(r => cols.map(c=>{ let v=r[c.key]; if(c.fmt&&v instanceof Date) v=fmtDate(v); if(v==null||v==='') v='—'; if(typeof v==='string') v=v.substring(0,50); return v; })),
+    theme     : 'grid',
+    styles    : { fontSize:7, cellPadding:2.2, textColor:[30,43,60], overflow:'ellipsize' },
+    headStyles: { fillColor:[232,61,42], textColor:255, fontStyle:'bold', fontSize:7.5 },
+    alternateRowStyles: { fillColor:[244,247,251] },
+    columnStyles: Object.fromEntries(cols.map((_,i)=>[ i, {cellWidth: colW} ]))
+  });
+
+  const pages = doc.internal.getNumberOfPages();
+  for (let p=1; p<=pages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(6.5); doc.setTextColor(180,180,180);
+    doc.text(`SMILE UAT Overdue Monitor  |  Page ${p} of ${pages}`, 14, doc.internal.pageSize.height-7);
+  }
+
+  doc.save(base+'.pdf');
+  document.getElementById('saveAsModal').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+//  MONTHLY TEST CASE SCHEDULE
+// ═══════════════════════════════════════════════════════
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+
+let _mlYear  = TODAY.getFullYear();
+let _mlMonth = TODAY.getMonth();   // 0-based
+let _mlPage  = 1;
+let _mlSortField = 'startDate', _mlSortDir = 1;
+let _mlStatusFilt = [];  // [] = all statuses shown
+let _mlDateFrom   = null;  // Date or null
+let _mlDateTo     = null;  // Date or null
+
+let _calYear      = TODAY.getFullYear();
+let _calMonth     = TODAY.getMonth(); // 0-based
+let _calStatusFilt = []; // [] = all statuses shown
+let _calDateFrom   = null;
+let _calDateTo     = null;
+
+// ─── Monthly List Status Filter ───
+function toggleMlStatus(norm) {
+  const idx = _mlStatusFilt.indexOf(norm);
+  if (idx >= 0) _mlStatusFilt.splice(idx, 1); else _mlStatusFilt.push(norm);
+  _mlPage = 1;
+  _updateMlChips();
+  renderMonthlyList();
+}
+function clearMlStatusFilt() {
+  _mlStatusFilt = [];
+  _mlPage = 1;
+  _updateMlChips();
+  renderMonthlyList();
+}
+function _updateMlChips() {
+  const noneActive = _mlStatusFilt.length === 0;
+  const allChip = document.getElementById('mlChipAll');
+  if (allChip) allChip.classList.toggle('active', noneActive);
+  ['notstarted','inprogress','pass','fail','blocked','na','deferred','cancel'].forEach(n => {
+    const el = document.getElementById('mlChip_' + n);
+    if (el) el.classList.toggle('active', _mlStatusFilt.includes(n));
+  });
+}
+
+// ─── Calendar Status Filter ───
+function toggleCalStatus(norm) {
+  const idx = _calStatusFilt.indexOf(norm);
+  if (idx >= 0) _calStatusFilt.splice(idx, 1); else _calStatusFilt.push(norm);
+  _updateCalChips();
+  renderCalendar();
+}
+function clearCalStatusFilt() {
+  _calStatusFilt = [];
+  _updateCalChips();
+  renderCalendar();
+}
+function _updateCalChips() {
+  const noneActive = _calStatusFilt.length === 0;
+  const allChip = document.getElementById('calChipAll');
+  if (allChip) allChip.classList.toggle('active', noneActive);
+  ['notstarted','inprogress','pass','fail','blocked','na','deferred','cancel'].forEach(n => {
+    const el = document.getElementById('calChip_' + n);
+    if (el) el.classList.toggle('active', _calStatusFilt.includes(n));
+  });
+}
+
+// ─── Date Range — Monthly List ───
+function onMlDateRangeChange() {
+  const fv = document.getElementById('mlDateFrom').value;
+  const tv = document.getElementById('mlDateTo').value;
+  _mlDateFrom = fv ? parseDate(fv) : null;
+  _mlDateTo   = tv ? parseDate(tv) : null;
+  // Highlight inputs when active
+  document.getElementById('mlDateFrom').classList.toggle('active', !!_mlDateFrom);
+  document.getElementById('mlDateTo').classList.toggle('active',   !!_mlDateTo);
+  _mlPage = 1;
+  renderMonthlyList();
+}
+function clearMlDateRange() {
+  _mlDateFrom = _mlDateTo = null;
+  document.getElementById('mlDateFrom').value = '';
+  document.getElementById('mlDateTo').value   = '';
+  document.getElementById('mlDateFrom').classList.remove('active');
+  document.getElementById('mlDateTo').classList.remove('active');
+  _mlPage = 1;
+  renderMonthlyList();
+}
+
+// ─── Date Range — Calendar ───
+function onCalDateRangeChange() {
+  const fv = document.getElementById('calDateFrom').value;
+  const tv = document.getElementById('calDateTo').value;
+  _calDateFrom = fv ? parseDate(fv) : null;
+  _calDateTo   = tv ? parseDate(tv) : null;
+  document.getElementById('calDateFrom').classList.toggle('active', !!_calDateFrom);
+  document.getElementById('calDateTo').classList.toggle('active',   !!_calDateTo);
+  renderCalendar();
+}
+function clearCalDateRange() {
+  _calDateFrom = _calDateTo = null;
+  document.getElementById('calDateFrom').value = '';
+  document.getElementById('calDateTo').value   = '';
+  document.getElementById('calDateFrom').classList.remove('active');
+  document.getElementById('calDateTo').classList.remove('active');
+  renderCalendar();
+}
+
+function _initMonthSelectors() {
+  // Collect unique years from data; always include current year
+  const years = [...new Set(
+    allData.filter(d => d.startDate).map(d => d.startDate.getFullYear())
+  )];
+  if (!years.includes(TODAY.getFullYear())) years.push(TODAY.getFullYear());
+  years.sort();
+
+  ['monthListMonthSel','calMonthSel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = MONTH_NAMES.map((m,i) => `<option value="${i}">${m}</option>`).join('');
+  });
+
+  ['monthListYearSel','calYearSel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  });
+
+  // Set current selections
+  _syncMonthListSel();
+  _syncCalSel();
+}
+
+// ─── Monthly List Navigation ───
+function prevMonthList() {
+  _mlMonth--; if (_mlMonth < 0) { _mlMonth = 11; _mlYear--; }
+  _syncMonthListSel(); _mlPage = 1; renderMonthlyList();
+}
+function nextMonthList() {
+  _mlMonth++; if (_mlMonth > 11) { _mlMonth = 0; _mlYear++; }
+  _syncMonthListSel(); _mlPage = 1; renderMonthlyList();
+}
+function onMonthListSelChange() {
+  _mlMonth = parseInt(document.getElementById('monthListMonthSel').value);
+  _mlYear  = parseInt(document.getElementById('monthListYearSel').value);
+  _mlPage  = 1;
+  renderMonthlyList();
+}
+function _syncMonthListSel() {
+  const ms = document.getElementById('monthListMonthSel');
+  const ys = document.getElementById('monthListYearSel');
+  if (ms) ms.value = _mlMonth;
+  if (ys) ys.value = _mlYear;
+}
+
+// ─── Monthly List Sort ───
+function sortMonthly(f) {
+  if (_mlSortField === f) _mlSortDir *= -1;
+  else { _mlSortField = f; _mlSortDir = 1; }
+  _mlPage = 1;
+  renderMonthlyList();
+}
+
+// ─── Render Monthly List ───
+function renderMonthlyList() {
+  const hasRange = _mlDateFrom || _mlDateTo;
+  const label = hasRange
+    ? `${fmtDate(_mlDateFrom) || '—'} → ${fmtDate(_mlDateTo) || '—'}`
+    : `${MONTH_NAMES[_mlMonth]} ${_mlYear}`;
+  document.getElementById('monthListLabel').textContent = label;
+  if (!hasRange) _syncMonthListSel();
+
+  // Base pool: use date range if set, otherwise use month/year selector
+  const hasDateRange = _mlDateFrom || _mlDateTo;
+  const infoEl = document.getElementById('mlDateRangeInfo');
+  if (hasDateRange) {
+    if (infoEl) {
+      infoEl.style.display = '';
+      infoEl.textContent = `📅 ${fmtDate(_mlDateFrom) || '—'} → ${fmtDate(_mlDateTo) || '—'}`;
+    }
+  } else {
+    if (infoEl) infoEl.style.display = 'none';
+  }
+
+  const monthPool = baseData.filter(d => {
+    if (!d.startDate) return false;
+    if (hasDateRange) {
+      if (_mlDateFrom && d.startDate < _mlDateFrom) return false;
+      if (_mlDateTo   && d.startDate > _mlDateTo)   return false;
+      return true;
+    }
+    return d.startDate.getFullYear() === _mlYear && d.startDate.getMonth() === _mlMonth;
+  });
+
+  // Update chip counts on status chips (always show all statuses)
+  const ML_LBL = { notstarted:'Not Started', inprogress:'In Progress',
+                   pass:'Pass', fail:'Fail', blocked:'Blocked', na:'N/A',
+                   deferred:'Deferred', cancel:'Cancelled' };
+  ['notstarted','inprogress','pass','fail','blocked','na','deferred','cancel'].forEach(n => {
+    const el  = document.getElementById('mlChip_' + n);
+    if (!el) return;
+    const cnt = monthPool.filter(d => d.statusNorm === n).length;
+    el.innerHTML = `${ML_LBL[n]} <span style="opacity:.55;font-size:.62rem">(${cnt})</span>`;
+    el.style.display = '';   // always visible
+  });
+
+  // Apply status filter
+  const rows = monthPool
+    .filter(d => _mlStatusFilt.length === 0 || _mlStatusFilt.includes(d.statusNorm))
+    .sort((a, b) => tableSort(a, b, _mlSortField, _mlSortDir));
+
+  document.getElementById('monthlyCountBadge').textContent = rows.length;
+  updateSortHeaders('monthlyTable', _mlSortField, _mlSortDir);
+
+  const start = (_mlPage - 1) * PAGE;
+  const page  = rows.slice(start, start + PAGE);
+  const tbody = document.getElementById('monthlyTbody');
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-cell">📭 No test cases with planned Start Date in ${label}</td></tr>`;
+    document.getElementById('monthlyPg').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = page.map(d => {
+    const isOverdue = d.daysLate > 0;
+    const sdLbl = d.startDate   ? `<span style="color:var(--orange)">${fmtDate(d.startDate)}</span>`   : '<span class="text-muted">—</span>';
+    const peLbl = d.plannedEnd  ? `<span style="color:var(--txt2)">${fmtDate(d.plannedEnd)}</span>`    : '<span class="text-muted">—</span>';
+    const lateLbl = isOverdue
+      ? `<span class="overdue-badge">${d.daysLate}d late</span>`
+      : `<span style="color:var(--green);font-size:.72rem">✓</span>`;
+    return `<tr ${isOverdue ? 'class="row-overdue"' : ''}>
+      <td style="white-space:nowrap">${sdLbl}</td>
+      <td><strong style="color:var(--txt)">${esc(d.tcId || '—')}</strong></td>
+      <td title="${esc(d.tcName)}">${esc((d.tcName || '').substring(0, 50))}${d.tcName && d.tcName.length > 50 ? '…' : ''}</td>
+      <td>${statusChip(d.statusNorm, d.status)}</td>
+      <td><span style="color:var(--txt2)">${esc(d.tcType    || '—')}</span></td>
+      <td><span style="color:var(--txt2)">${esc(d.module    || '—')}</span></td>
+      <td>${esc(d.assignee || '—')}</td>
+      <td style="white-space:nowrap">${peLbl}</td>
+      <td>${lateLbl}</td>
+    </tr>`;
+  }).join('');
+
+  renderPg('monthlyPg', Math.ceil(rows.length / PAGE), _mlPage,
+    p => { _mlPage = p; renderMonthlyList(); });
+}
+
+// ═══════════════════════════════════════════════════════
+//  CALENDAR VIEW
+// ═══════════════════════════════════════════════════════
+function prevMonthCal() {
+  _calMonth--; if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+  _syncCalSel(); renderCalendar();
+}
+function nextMonthCal() {
+  _calMonth++; if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+  _syncCalSel(); renderCalendar();
+}
+function onCalSelChange() {
+  _calMonth = parseInt(document.getElementById('calMonthSel').value);
+  _calYear  = parseInt(document.getElementById('calYearSel').value);
+  renderCalendar();
+}
+function _syncCalSel() {
+  const ms = document.getElementById('calMonthSel');
+  const ys = document.getElementById('calYearSel');
+  if (ms) ms.value = _calMonth;
+  if (ys) ys.value = _calYear;
+}
+
+function renderCalendar() {
+  document.getElementById('calMonthLabel').textContent = `${MONTH_NAMES[_calMonth]} ${_calYear}`;
+  _syncCalSel();
+
+  // Show/hide date range info badge
+  const calHasRange = _calDateFrom || _calDateTo;
+  const calInfoEl = document.getElementById('calDateRangeInfo');
+  if (calInfoEl) {
+    calInfoEl.style.display = calHasRange ? '' : 'none';
+    if (calHasRange) calInfoEl.textContent = `📅 ${fmtDate(_calDateFrom)||'—'} → ${fmtDate(_calDateTo)||'—'}`;
+  }
+
+  // Full pool for this month, optionally intersected with date range
+  const monthPool = baseData.filter(d => {
+    if (!d.startDate) return false;
+    if (d.startDate.getFullYear() !== _calYear || d.startDate.getMonth() !== _calMonth) return false;
+    if (calHasRange) {
+      if (_calDateFrom && d.startDate < _calDateFrom) return false;
+      if (_calDateTo   && d.startDate > _calDateTo)   return false;
+    }
+    return true;
+  });
+
+  // Update chip counts on calendar status chips (always show all statuses)
+  const CAL_LBL = { notstarted:'Not Started', inprogress:'In Progress',
+                    pass:'Pass', fail:'Fail', blocked:'Blocked', na:'N/A',
+                    deferred:'Deferred', cancel:'Cancelled' };
+  ['notstarted','inprogress','pass','fail','blocked','na','deferred','cancel'].forEach(n => {
+    const el  = document.getElementById('calChip_' + n);
+    if (!el) return;
+    const cnt = monthPool.filter(d => d.statusNorm === n).length;
+    el.innerHTML = `${CAL_LBL[n]} <span style="opacity:.55;font-size:.62rem">(${cnt})</span>`;
+    el.style.display = '';   // always visible
+  });
+
+  // Apply status filter
+  const monthRows = _calStatusFilt.length === 0
+    ? monthPool
+    : monthPool.filter(d => _calStatusFilt.includes(d.statusNorm));
+
+  // Build map: day → array of TCs
+  const dayMap = {};
+  monthRows.forEach(d => {
+    const day = d.startDate.getDate();
+    if (!dayMap[day]) dayMap[day] = [];
+    dayMap[day].push(d);
+  });
+
+  // Summary strip
+  const total  = monthRows.length;
+  const overdue = monthRows.filter(d => d.daysLate > 0).length;
+  const notS   = monthRows.filter(d => d.statusNorm === 'notstarted').length;
+  const inProg = monthRows.filter(d => d.statusNorm === 'inprogress').length;
+  const passed = monthRows.filter(d => d.statusNorm === 'pass').length;
+  document.getElementById('calSummary').innerHTML = `
+    <div class="cal-sum-item">
+      <div class="cal-sum-val" style="color:var(--blue)">${total}</div>
+      <div class="cal-sum-lbl">Total TCs</div>
+    </div>
+    <div class="cal-sum-item">
+      <div class="cal-sum-val" style="color:var(--os-red)">${overdue}</div>
+      <div class="cal-sum-lbl">Overdue</div>
+    </div>
+    <div class="cal-sum-item">
+      <div class="cal-sum-val" style="color:var(--txt2)">${notS}</div>
+      <div class="cal-sum-lbl">Not Started</div>
+    </div>
+    <div class="cal-sum-item">
+      <div class="cal-sum-val" style="color:var(--blue)">${inProg}</div>
+      <div class="cal-sum-lbl">In Progress</div>
+    </div>
+    <div class="cal-sum-item">
+      <div class="cal-sum-val" style="color:var(--green)">${passed}</div>
+      <div class="cal-sum-lbl">Passed</div>
+    </div>`;
+
+  // Build calendar grid
+  const DOW_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html = DOW_LABELS.map(d => `<div class="cal-dow-header">${d}</div>`).join('');
+
+  const firstDow      = new Date(_calYear, _calMonth, 1).getDay();
+  const daysInMonth   = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const daysInPrevMon = new Date(_calYear, _calMonth, 0).getDate();
+  const totalCells    = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+
+  for (let i = 0; i < totalCells; i++) {
+    const dayNum      = i - firstDow + 1;
+    const thisMonth   = dayNum >= 1 && dayNum <= daysInMonth;
+    const isToday     = thisMonth &&
+                        _calYear  === TODAY.getFullYear() &&
+                        _calMonth === TODAY.getMonth()    &&
+                        dayNum    === TODAY.getDate();
+    const isWeekend   = (i % 7 === 0) || (i % 7 === 6);
+
+    let cls = 'cal-day';
+    if (!thisMonth) cls += ' other-month';
+    else if (isToday) cls += ' today';
+    else if (isWeekend) cls += ' weekend';
+
+    // Display day number (inc. overflow days from prev/next month)
+    const displayNum = thisMonth ? dayNum
+      : (dayNum < 1 ? daysInPrevMon + dayNum : dayNum - daysInMonth);
+
+    let cellContent = '';
+    if (thisMonth && dayMap[dayNum] && dayMap[dayNum].length) {
+      const tcs    = dayMap[dayNum];
+      const MAX_SH = 3;
+      const shown  = tcs.slice(0, MAX_SH);
+
+      cellContent = shown.map(d => {
+        let itemCls = 'cal-tc-item';
+        if      (d.daysLate > 0)               itemCls += ' s-overdue';
+        else if (d.statusNorm === 'pass')       itemCls += ' s-pass';
+        else if (d.statusNorm === 'inprogress') itemCls += ' s-inprogress';
+        else if (d.statusNorm === 'fail')       itemCls += ' s-fail';
+        else if (d.statusNorm === 'blocked')    itemCls += ' s-blocked';
+        else if (d.statusNorm === 'deferred')   itemCls += ' s-deferred';
+        else if (d.statusNorm === 'cancel')     itemCls += ' s-cancel';
+        else                                    itemCls += ' s-notstarted';
+
+        const lbl = d.tcId
+          ? `${esc(d.tcId)} ${esc((d.tcName || '').substring(0, 14))}`
+          : esc((d.tcName || '').substring(0, 18));
+        const tooltip = [d.tcId, d.tcName, d.assignee, d.module,
+          d.daysLate > 0 ? d.daysLate + 'd late' : d.statusNorm]
+          .filter(Boolean).join(' | ');
+        return `<div class="${itemCls}" title="${esc(tooltip)}">${lbl}</div>`;
+      }).join('');
+
+      if (tcs.length > MAX_SH) {
+        cellContent += `<div class="cal-tc-more">+${tcs.length - MAX_SH} more</div>`;
+      }
+    }
+
+    html += `<div class="${cls}">
+      <div class="cal-day-num">${displayNum}</div>
+      ${cellContent}
+    </div>`;
+  }
+
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+// ── Init ──
+document.getElementById('todayChip').textContent = '📅 Today: ' + fmtDate(TODAY);
+</script>
+</body>
+</html>

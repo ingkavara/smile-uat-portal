@@ -1,0 +1,2645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UAT Issue Monitor & Processing Time Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;--primary:#2563eb;--primary-d:#1d4ed8;
+  --s1:#ef4444;--s2:#f97316;--s3:#eab308;--s4:#22c55e;
+  --red:#dc2626;--green:#16a34a;--gray:#94a3b8;
+  --radius:10px;--shadow:0 1px 4px rgba(0,0,0,.08);
+}
+.dark{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#0f172a;--border:#334155;
+  --text:#f1f5f9;--muted:#94a3b8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;}
+body{padding-bottom:68px;}
+
+/* ── HEADER ── */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+.hdr-title{font-size:15px;font-weight:700;color:var(--text);}
+.hdr-sub{font-size:10px;color:var(--muted);margin-top:1px;letter-spacing:.04em;}
+.hdr-btns{display:flex;gap:8px;align-items:center;}
+.btn-icon{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--muted);}
+.btn-icon:hover{background:var(--bg);}
+
+/* ── MAIN LAYOUT ── */
+.main{max-width:1400px;margin:0 auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+
+/* ── SECTION / CARD ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);}
+.sec-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.sec-title .badge{background:var(--primary);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;}
+/* ── COLLAPSIBLE CARD ── */
+.sec-title.collapsible{cursor:pointer;user-select:none;}
+.sec-title.collapsible:hover{color:var(--primary);}
+.collapse-arrow{font-size:10px;color:var(--muted);margin-left:auto;transition:transform .2s;display:inline-block;}
+.card-body{overflow:hidden;transition:max-height .25s ease;}
+.card-body.collapsed{max-height:0!important;}
+
+/* ── SLA BASELINE ── */
+.sla-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.sla-card{border-radius:8px;padding:12px 14px;border:1.5px solid;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;}
+.sla-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
+.sla-card.active-filter{outline:2.5px solid;outline-offset:2px;}
+.sla-card.s1{background:rgba(239,68,68,.06);border-color:var(--s1);}
+.sla-card.s2{background:rgba(249,115,22,.06);border-color:var(--s2);}
+.sla-card.s3{background:rgba(234,179,8,.06);border-color:var(--s3);}
+.sla-card.s4{background:rgba(34,197,94,.06);border-color:var(--s4);}
+.sla-card.s1.active-filter{outline-color:var(--s1);}
+.sla-card.s2.active-filter{outline-color:var(--s2);}
+.sla-card.s3.active-filter{outline-color:var(--s3);}
+.sla-card.s4.active-filter{outline-color:var(--s4);}
+.dark .sla-card.s1{background:rgba(239,68,68,.12);}
+.dark .sla-card.s2{background:rgba(249,115,22,.12);}
+.dark .sla-card.s3{background:rgba(234,179,8,.12);}
+.dark .sla-card.s4{background:rgba(34,197,94,.12);}
+.sla-hdr{display:flex;align-items:baseline;gap:6px;margin-bottom:6px;}
+.sla-lv{font-size:13px;font-weight:800;}
+.sla-s1 .sla-lv{color:var(--s1);}
+.sla-s2 .sla-lv{color:var(--s2);}
+.sla-s3 .sla-lv{color:var(--s3);}
+.sla-s4 .sla-lv{color:var(--s4);}
+.sla-name{font-size:10px;color:var(--muted);}
+.sla-range{display:flex;align-items:center;gap:4px;margin-bottom:8px;flex-wrap:wrap;}
+.sla-range label{font-size:9px;color:var(--muted);font-weight:600;min-width:22px;}
+.sla-range input{width:38px;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--surface);color:var(--text);font-size:10px;text-align:center;}
+.sla-range span{font-size:9px;color:var(--muted);}
+.sla-stats{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:4px;}
+.sla-stat{display:flex;align-items:center;gap:3px;font-size:10px;}
+.sla-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.sla-dot.total{background:var(--muted);}
+.sla-dot.active{background:var(--primary);}
+.sla-dot.meet{background:var(--green);}
+.sla-dot.breach{background:var(--red);}
+.sla-dot.closed{background:var(--gray);}
+.sla-stat-num{font-weight:700;}
+.sla-source{font-size:9px;color:var(--muted);text-align:right;margin-top:4px;font-style:italic;}
+
+/* ── IMF ── */
+.imf-rows{display:flex;flex-direction:column;gap:10px;}
+.imf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.imf-group{display:flex;flex-direction:column;gap:5px;}
+.imf-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:4px;}
+.chip{padding:3px 9px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:10px;font-weight:500;color:var(--text);transition:all .1s;user-select:none;}
+.chip:hover{border-color:var(--primary);color:var(--primary);}
+.chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+.chip.all-chip.active{background:var(--muted);border-color:var(--muted);}
+.ws-select{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:11px;min-width:160px;}
+.imf-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding-top:8px;border-top:1px solid var(--border);}
+.imf-count{font-size:11px;color:var(--muted);}
+.imf-count strong{color:var(--text);font-weight:700;}
+.btn-reset{padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);cursor:pointer;font-size:10px;color:var(--muted);}
+.btn-reset:hover{border-color:var(--red);color:var(--red);}
+
+/* ── DATA SOURCE ── */
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;color:var(--muted);font-size:12px;}
+.upload-zone:hover{border-color:var(--primary);color:var(--primary);}
+.upload-icon{font-size:24px;display:block;margin-bottom:4px;}
+.file-info-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--surface2);border-radius:7px;border:1px solid var(--border);}
+.file-info-bar .fi-name{font-weight:600;font-size:12px;}
+.file-info-bar .fi-rows{font-size:11px;color:var(--muted);}
+.btn-sm{padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);cursor:pointer;font-size:10px;color:var(--text);}
+.btn-sm:hover{border-color:var(--primary);color:var(--primary);}
+.btn-clear{color:var(--red) !important;}
+.btn-clear:hover{border-color:var(--red) !important;}
+.btn-analyze{padding:4px 14px;border:none;border-radius:6px;background:var(--primary);color:#fff;font-size:11px;font-weight:600;cursor:pointer;}
+.btn-analyze:hover{background:var(--primary-d);}
+.col-map-panel{margin-top:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;}
+.col-map-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.col-map-row{display:flex;flex-direction:column;gap:2px;}
+.col-map-label{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;}
+.col-map-select{padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-size:10px;width:100%;}
+.col-preview{display:none;}
+
+/* ── TAB NAV ── */
+.tab-nav{display:flex;gap:2px;border-bottom:2px solid var(--border);margin-bottom:0;}
+.tab-btn{padding:7px 18px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+.tab-btn:hover{color:var(--primary);}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+.tab-pane{display:none;flex-direction:column;gap:10px;padding-top:10px;}
+.tab-pane.active{display:flex;}
+
+/* ── SLA BREACH ── */
+.breach-boxes{display:flex;gap:10px;margin-bottom:12px;}
+.breach-box{flex:1;border-radius:8px;padding:14px 16px;text-align:center;}
+.breach-box.overdue{background:rgba(239,68,68,.08);border:1.5px solid var(--s1);}
+.breach-box.ontrack{background:rgba(34,197,94,.08);border:1.5px solid var(--s4);}
+.breach-box.nodate{background:rgba(100,116,139,.08);border:1.5px solid var(--gray);}
+.breach-num{font-size:32px;font-weight:800;line-height:1;}
+.breach-box.overdue .breach-num{color:var(--s1);}
+.breach-box.ontrack .breach-num{color:var(--s4);}
+.breach-box.nodate .breach-num{color:var(--gray);}
+.breach-lbl{font-size:10px;color:var(--muted);margin-top:4px;}
+.ws-breakdown-title{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.ws-bk-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.ws-bk-item{display:flex;align-items:center;gap:6px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:5px 10px;min-width:80px;}
+.ws-bk-name{font-size:10px;font-weight:600;color:var(--red);}
+.ws-bk-cnt{font-size:14px;font-weight:800;color:var(--red);}
+.ws-bk-sub{font-size:9px;color:var(--muted);}
+
+/* ── CHART ── */
+.chart-toggle-btn{margin-left:auto;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:10px;color:var(--muted);}
+
+
+/* ── OVERDUE TABLE ── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;}
+th{padding:6px 7px;text-align:left;background:var(--surface2);color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-bottom:1.5px solid var(--border);white-space:normal;line-height:1.2;}
+td{padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+tr:hover td{background:var(--surface2);}
+#overdueTable th:nth-child(1){width:6%;}   /* issue key */
+#overdueTable th:nth-child(2){width:13%;}  /* summary */
+#overdueTable th:nth-child(3){width:7%;}   /* status */
+#overdueTable th:nth-child(4){width:7%;}   /* workstream */
+#overdueTable th:nth-child(5){width:6%;}   /* test type */
+#overdueTable th:nth-child(6){width:8%;}   /* issue category */
+#overdueTable th:nth-child(7){width:7%;}   /* module */
+#overdueTable th:nth-child(8){width:7%;}   /* assignee */
+#overdueTable th:nth-child(9){width:7%;}   /* created */
+#overdueTable th:nth-child(10){width:7%;}  /* due date */
+#overdueTable th:nth-child(11){width:8%;}  /* sla breach */
+#overdueTable th:nth-child(12){width:7%;}  /* notify */
+#issueTable th:nth-child(1){width:5%;}   /* key */
+#issueTable th:nth-child(2){width:14%;}  /* summary */
+#issueTable th:nth-child(3){width:7%;}   /* status */
+#issueTable th:nth-child(4){width:6%;}   /* severity */
+#issueTable th:nth-child(5){width:7%;}   /* module */
+#issueTable th:nth-child(6){width:7%;}   /* workstream */
+#issueTable th:nth-child(7){width:8%;}   /* issue category */
+#issueTable th:nth-child(8){width:7%;}   /* assignee */
+#issueTable th:nth-child(9){width:7%;}   /* created */
+#issueTable th:nth-child(10){width:7%;}  /* due date */
+#issueTable th:nth-child(11){width:6%;}  /* age wd */
+#issueTable th:nth-child(12){width:7%;}  /* notify */
+.key-link{color:var(--primary);font-weight:700;font-size:10px;font-family:monospace;text-decoration:none;}
+.key-link:hover{text-decoration:underline;}
+th.sortable{cursor:pointer;user-select:none;}
+th.sortable:hover{color:var(--primary);}
+th.sort-asc::after{content:' ▲';font-size:8px;color:var(--primary);}
+th.sort-desc::after{content:' ▼';font-size:8px;color:var(--primary);}
+th.sortable:not(.sort-asc):not(.sort-desc)::after{content:' ↕';font-size:8px;color:var(--muted);}
+.tbl-filter-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:7px 0 9px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.tbl-filter-bar label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;}
+.tbl-filter-select{padding:3px 7px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:10px;}
+.tbl-filter-reset{padding:2px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);cursor:pointer;font-size:10px;color:var(--muted);}
+.tbl-filter-reset:hover{border-color:var(--red);color:var(--red);}
+/* ── SECTION SEARCH (shared by OVERDUE + ISSUE LIST) ── */
+.od-search-wrap,.iss-search-wrap{position:relative;display:flex;align-items:center;}
+.od-search-wrap .search-icon,.iss-search-wrap .search-icon{position:absolute;left:7px;font-size:11px;pointer-events:none;color:var(--muted);}
+.od-search-input,.iss-search-input{padding:3px 28px 3px 24px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:10px;width:180px;transition:border-color .15s,width .2s;}
+.od-search-input:focus,.iss-search-input:focus{outline:none;border-color:var(--primary);width:220px;}
+.od-search-input::placeholder,.iss-search-input::placeholder{color:var(--muted);}
+.od-search-clear,.iss-search-clear{position:absolute;right:6px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted);padding:0;line-height:1;display:none;}
+.od-search-clear.show,.iss-search-clear.show{display:block;}
+.od-search-clear:hover,.iss-search-clear:hover{color:var(--red);}
+.od-search-count,.iss-search-count{font-size:9px;color:var(--muted);white-space:nowrap;}
+.sev-badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;}
+.sev-s1{background:rgba(239,68,68,.12);color:var(--s1);}
+.sev-s2{background:rgba(249,115,22,.12);color:var(--s2);}
+.sev-s3{background:rgba(234,179,8,.15);color:#a16207;}
+.sev-s4{background:rgba(34,197,94,.12);color:var(--green);}
+.sev-none{background:rgba(100,116,139,.1);color:var(--muted);}
+.cat-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;background:rgba(124,58,237,.1);color:#6d28d9;white-space:normal;line-height:1.3;}
+.dark .cat-badge{background:rgba(167,139,250,.15);color:#a78bfa;}
+.status-chip{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;background:rgba(37,99,235,.1);color:var(--primary);}
+.sla-breach-cell{display:flex;align-items:center;gap:4px;white-space:nowrap;}
+.sla-attn{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:800;flex-shrink:0;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+.breach-days{font-weight:700;color:var(--red);font-size:10px;}
+.ontrack-lbl{color:var(--green);font-size:10px;}
+.empty-cell{text-align:center;color:var(--muted);padding:24px;font-size:12px;}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;}
+.pg-btn{padding:3px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;font-size:10px;color:var(--muted);}
+.pg-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+.pg-btn:hover:not(.active){border-color:var(--primary);color:var(--primary);}
+
+/* ── EXPORT BAR ── */
+.export-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 -2px 8px rgba(0,0,0,.06);z-index:200;}
+.export-title{font-size:12px;font-weight:700;}
+.export-sub{font-size:9px;color:var(--muted);margin-left:-8px;}
+.export-btns{margin-left:auto;display:flex;gap:8px;}
+.btn-export{padding:5px 14px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600;}
+.btn-export.csv{background:#16a34a;color:#fff;}
+.btn-export.pdf{background:var(--primary);color:#fff;}
+.btn-export.print{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+.btn-export:hover{opacity:.9;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#f1f5f9;padding:7px 18px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:300;}
+#toast.show{opacity:1;}
+
+/* ── MISC ── */
+.hidden{display:none!important;}
+
+/* ── PREVIEW MODAL ── */
+.preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:400;display:flex;align-items:center;justify-content:center;padding:16px;}
+.preview-modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.22);width:100%;max-width:1140px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+.preview-modal-hdr{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);}
+.preview-modal-title{font-size:14px;font-weight:700;color:var(--text);}
+.preview-modal-close{background:none;border:1px solid var(--border);font-size:14px;cursor:pointer;color:var(--muted);padding:3px 8px;border-radius:5px;margin-left:auto;}
+.preview-modal-close:hover{background:var(--bg);color:var(--text);}
+.preview-modal-body{flex:1;overflow:auto;padding:14px 18px;}
+.preview-modal-footer{padding:11px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface2);}
+.preview-meta{font-size:11px;color:var(--muted);flex:1;}
+
+/* ── SAVE AS DROPDOWN ── */
+.save-as-wrap{position:relative;}
+.btn-save-as{padding:5px 14px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:11px;font-weight:600;background:var(--surface2);color:var(--text);display:flex;align-items:center;gap:5px;height:100%;}
+.btn-save-as:hover{border-color:var(--primary);color:var(--primary);}
+.save-as-menu{position:absolute;bottom:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.14);min-width:172px;overflow:hidden;z-index:210;}
+.save-as-item{display:flex;align-items:center;gap:9px;padding:8px 14px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text);border:none;background:none;width:100%;text-align:left;}
+.save-as-item:hover{background:var(--bg);color:var(--primary);}
+.save-as-item .sai-icon{font-size:14px;width:18px;text-align:center;}
+.empty-msg{text-align:center;color:var(--muted);padding:40px;font-size:13px;}
+.overview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.ov-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;}
+.ov-num{font-size:28px;font-weight:800;line-height:1.1;}
+.ov-lbl{font-size:10px;color:var(--muted);margin-top:4px;}
+
+/* ── STATUS SUMMARY (BY STATUS / EXCL OVERDUE) ── */
+.status-sum-header{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);align-items:center;}
+.ssh-item{display:flex;flex-direction:column;align-items:center;min-width:80px;}
+.ssh-num{font-size:22px;font-weight:800;line-height:1.1;}
+.ssh-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:2px;letter-spacing:.04em;}
+.ssh-divider{width:1px;background:var(--border);align-self:stretch;margin:0 4px;}
+.ssh-pct-bar{flex:1;min-width:120px;display:flex;flex-direction:column;gap:3px;justify-content:center;}
+.ssh-bar-track{height:7px;border-radius:4px;background:rgba(100,116,139,.15);overflow:hidden;position:relative;}
+.ssh-bar-fill{height:100%;border-radius:4px;background:var(--s1);transition:width .4s ease;}
+.ssh-bar-lbl{font-size:9px;color:var(--muted);}
+
+.status-sum-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+.status-sum-card{border-radius:8px;padding:10px 12px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;min-width:120px;transition:all .15s;user-select:none;position:relative;}
+.status-sum-card:hover{border-color:var(--primary);background:rgba(37,99,235,.04);}
+.status-sum-card.active{border-color:var(--primary);background:rgba(37,99,235,.08);}
+.status-sum-card.has-overdue{border-color:rgba(239,68,68,.35);}
+.status-sum-card.has-overdue:hover{border-color:var(--s1);}
+.status-sum-card.has-overdue.active{border-color:var(--primary);}
+.ssc-top{display:flex;align-items:baseline;gap:6px;margin-bottom:2px;}
+.ssc-total{font-size:24px;font-weight:800;color:var(--text);line-height:1;}
+.ssc-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;line-height:1.3;word-break:break-word;margin-bottom:6px;}
+.ssc-row{display:flex;align-items:center;gap:5px;font-size:9px;margin-top:3px;}
+.ssc-od-pill{display:inline-flex;align-items:center;gap:3px;background:rgba(239,68,68,.1);color:var(--s1);border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;}
+.ssc-ok-pill{display:inline-flex;align-items:center;gap:3px;background:rgba(34,197,94,.1);color:var(--green);border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;}
+.ssc-bar-track{height:4px;border-radius:3px;background:rgba(100,116,139,.15);overflow:hidden;margin-top:5px;}
+.ssc-bar-fill{height:100%;border-radius:3px;background:var(--s1);transition:width .4s ease;}
+
+.excl-overdue-btn{padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);cursor:pointer;font-size:10px;color:var(--muted);}
+.excl-overdue-btn.active{border-color:var(--s1);color:var(--s1);background:rgba(239,68,68,.07);}
+.show-overdue-btn{padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);cursor:pointer;font-size:10px;color:var(--muted);}
+.show-overdue-btn.active{border-color:var(--s2);color:var(--s2);background:rgba(249,115,22,.08);}
+.issue-view-toggles{display:flex;gap:6px;margin-left:auto;align-items:center;}
+.status-sum-note{font-size:9px;color:var(--muted);margin-top:6px;font-style:italic;}
+
+/* ── HISTORY TOOLTIP ── */
+#histTooltip{
+  position:fixed;z-index:9999;pointer-events:none;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 6px 24px rgba(0,0,0,.16);
+  max-width:340px;min-width:220px;padding:12px 14px;
+  font-size:11px;line-height:1.5;color:var(--text);
+  display:none;transition:opacity .15s;
+}
+#histTooltip.show{display:block;}
+.ht-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:5px;}
+.ht-body{color:var(--text);font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow-y:auto;}
+.ht-empty{color:var(--muted);font-style:italic;}
+
+/* ── ACTION BUTTONS (NOTIFY + COMMENT) ── */
+.action-cell{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
+.btn-notify{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:9px;font-weight:600;color:var(--muted);white-space:nowrap;transition:all .15s;width:100%;}
+.btn-notify:hover{border-color:#7c3aed;color:#7c3aed;background:rgba(124,58,237,.06);}
+.btn-comment{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-size:9px;font-weight:600;color:var(--muted);white-space:nowrap;transition:all .15s;width:100%;}
+.btn-comment:hover{border-color:#0891b2;color:#0891b2;background:rgba(8,145,178,.06);}
+.btn-comment.has-comment{border-color:#0891b2;color:#0891b2;background:rgba(8,145,178,.08);}
+
+/* ── COMMENT MODAL ── */
+.comment-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px;}
+.comment-modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.22);width:100%;max-width:600px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.comment-modal-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;}
+.comment-modal-title{font-size:13px;font-weight:700;color:var(--text);flex:1;}
+.comment-modal-key{font-family:monospace;font-size:12px;font-weight:800;color:var(--primary);}
+.comment-modal-summary{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.comment-modal-close{background:none;border:1px solid var(--border);font-size:13px;cursor:pointer;color:var(--muted);padding:3px 8px;border-radius:5px;flex-shrink:0;}
+.comment-modal-close:hover{background:var(--bg);}
+.comment-meta-strip{display:flex;flex-wrap:wrap;gap:8px;padding:10px 18px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.cm-meta-item{display:flex;flex-direction:column;gap:1px;}
+.cm-meta-label{font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.cm-meta-value{font-size:10px;font-weight:600;color:var(--text);}
+.comment-modal-body{flex:1;overflow-y:auto;padding:16px 18px;}
+.comment-block{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+.comment-block-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.comment-block-icon{font-size:14px;}
+.comment-block-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.comment-block-count{font-size:9px;background:var(--primary);color:#fff;border-radius:10px;padding:1px 6px;font-weight:700;}
+.comment-text{font-size:11px;color:var(--text);line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+.comment-empty{text-align:center;padding:32px;color:var(--muted);font-size:12px;}
+.comment-entry{padding:10px 0;border-bottom:1px solid var(--border);}
+.comment-entry:last-child{border-bottom:none;}
+.comment-entry-num{font-size:9px;font-weight:700;color:var(--muted);margin-bottom:4px;}
+.comment-entry-text{font-size:11px;color:var(--text);line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+
+/* ── NOTIFY MODAL ── */
+.notify-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px;}
+.notify-modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.22);width:100%;max-width:520px;display:flex;flex-direction:column;overflow:hidden;}
+.notify-modal-hdr{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);}
+.notify-modal-title{font-size:13px;font-weight:700;color:var(--text);}
+.notify-modal-close{background:none;border:1px solid var(--border);font-size:13px;cursor:pointer;color:var(--muted);padding:3px 8px;border-radius:5px;margin-left:auto;}
+.notify-modal-close:hover{background:var(--bg);}
+.notify-modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:11px;}
+.notify-field{display:flex;flex-direction:column;gap:4px;}
+.notify-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.notify-input{padding:6px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:11px;width:100%;}
+.notify-input:focus{outline:none;border-color:var(--primary);}
+.notify-textarea{padding:6px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:11px;width:100%;resize:vertical;min-height:120px;font-family:inherit;}
+.notify-textarea:focus{outline:none;border-color:var(--primary);}
+.notify-modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;background:var(--surface2);flex-wrap:wrap;}
+.notify-issue-meta{font-size:10px;color:var(--muted);flex:1;}
+.btn-notify-send{padding:6px 16px;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;}
+.btn-notify-email{background:var(--primary);color:#fff;}
+.btn-notify-email:hover{background:var(--primary-d);}
+.btn-notify-teams{background:#6264a7;color:#fff;}
+.btn-notify-teams:hover{background:#4f5196;}
+.notify-tab-row{display:flex;gap:6px;margin-bottom:4px;}
+.notify-tab{padding:4px 12px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);cursor:pointer;font-size:10px;font-weight:600;color:var(--muted);}
+.notify-tab.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+.notify-hint{font-size:9px;color:var(--muted);margin-top:2px;}
+
+/* ── PRINT ── */
+@media print{
+  .export-bar,.tab-nav,header,.upload-zone,.file-info-bar,.col-map-panel,.btn-sm,.btn-analyze,.chart-toggle-btn{display:none!important;}
+  .tab-pane{display:flex!important;}
+  body{padding-bottom:0;}
+  .card{break-inside:avoid;box-shadow:none;border:1px solid #ccc;}
+}
+
+@media(max-width:900px){
+  .sla-grid{grid-template-columns:repeat(2,1fr);}
+  .imf-row{grid-template-columns:1fr;}
+  .breach-boxes,.outcome-boxes{flex-direction:column;}
+  .col-map-grid{grid-template-columns:1fr 1fr;}
+  .overview-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:600px){
+  .sla-grid{grid-template-columns:1fr 1fr;}
+  .col-map-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="hdr-title">📊 UAT Issue Monitor &amp; Processing Time Analyzer</div>
+    <div class="hdr-sub">SMILE S4 &bull; UAT_PLAN &bull; ISSUE_RESOLUTION_SLA</div>
+  </div>
+  <div class="hdr-btns">
+    <a class="btn-icon" id="boardLink" href="https://pttgc.atlassian.net/jira/software/projects/UATI/list" target="_blank" style="text-decoration:none">🔗 Jira Board</a>
+    <button class="btn-icon" onclick="toggleDark()">🌙 Dark</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── SLA BASELINE ── -->
+  <div class="card" id="slaBaselineCard">
+    <div class="sec-title">
+      📋 SLA BASELINE — SEVERITY LEVEL
+      <span class="sla-source" style="margin-left:auto;font-style:italic;font-size:9px;font-weight:400">
+        SOURCE: CUSTOM FIELD: SEVERITY LEVEL — CLICK CARD TO FILTER
+      </span>
+    </div>
+    <div class="sla-grid" id="slaGrid"></div>
+  </div>
+
+  <!-- ── DATA SOURCE ── -->
+  <div class="card" id="dataCard">
+    <div class="sec-title collapsible" onclick="toggleCardBody('dataBody','dataArrow')">
+      📁 DATA SOURCE — UPLOAD JIRA EXPORT FILE
+      <span class="collapse-arrow" id="dataArrow">▲</span>
+    </div>
+    <div class="card-body" id="dataBody" style="max-height:600px">
+
+      <div class="upload-zone" id="uploadZone"
+           onclick="document.getElementById('fileInput').click()"
+           ondrop="handleDrop(event)" ondragover="event.preventDefault()">
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)" style="display:none">
+        <span class="upload-icon">📤</span>
+        <div>Drag &amp; drop or click to browse <strong>CSV / Excel (.xlsx)</strong></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Jira export or custom spreadsheet with issue data</div>
+      </div>
+
+      <!-- Jira URL config -->
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">🔗 Jira Base URL</span>
+        <input id="jiraUrlInput" type="text" value="https://pttgc.atlassian.net"
+          style="flex:1;min-width:220px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:11px;"
+          placeholder="https://your-org.atlassian.net"
+          onchange="setJiraBase(this.value)">
+        <a id="boardLinkInline" href="https://pttgc.atlassian.net/jira/software/projects/UATI/list" target="_blank"
+          style="font-size:10px;color:var(--primary);text-decoration:none;white-space:nowrap;">↗ Open Board</a>
+      </div>
+
+      <div class="file-info-bar hidden" id="fileInfoBar">
+        <span>✅</span>
+        <span class="fi-name" id="fileName">—</span>
+        <span class="fi-rows" id="fileRows">—</span>
+        <button class="btn-sm" onclick="toggleColMap()">📋 Column Mapping ▾</button>
+        <button class="btn-analyze" data-orig="⚙ Analyze" onclick="analyzeData()">⚙ Analyze</button>
+        <button class="btn-sm btn-clear" onclick="clearData()">✕ Clear</button>
+      </div>
+
+      <div class="col-map-panel hidden" id="colMapPanel">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px;">📋 Column Mapping — map your CSV/Excel columns to fields</div>
+        <div class="col-map-grid" id="colMapGrid"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <button class="btn-analyze" data-orig="⚙ Apply &amp; Analyze" onclick="analyzeData()">⚙ Apply &amp; Analyze</button>
+          <button class="btn-sm" onclick="saveColMap()">💾 Save Mapping</button>
+          <span style="font-size:10px;color:var(--muted)" id="mapStatus"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── ISSUE MANAGEMENT FILTER ── -->
+  <div class="card" id="imfCard">
+    <div class="sec-title collapsible" onclick="toggleCardBody('imfBody','imfArrow')">
+      🔍 ISSUE MANAGEMENT FILTER
+      <span class="collapse-arrow" id="imfArrow">▲</span>
+    </div>
+    <div class="card-body" id="imfBody" style="max-height:600px">
+      <div class="imf-rows">
+        <div class="imf-row">
+          <div class="imf-group">
+            <div class="imf-label">◉ STATUS</div>
+            <div class="chip-wrap" id="statusChips"></div>
+          </div>
+          <div class="imf-group">
+            <div class="imf-label">WORKSTREAM</div>
+            <select class="ws-select" id="wsFilter" onchange="applyFilters()">
+              <option value="">— All Workstreams —</option>
+            </select>
+          </div>
+        </div>
+        <div class="imf-row">
+          <div class="imf-group">
+            <div class="imf-label">TEST CASE TYPE</div>
+            <div class="chip-wrap" id="testTypeChips"></div>
+          </div>
+          <div class="imf-group">
+            <div class="imf-label">SEVERITY LEVEL</div>
+            <div class="chip-wrap" id="severityChips"></div>
+          </div>
+        </div>
+        <div class="imf-row">
+          <div class="imf-group" style="grid-column:1/-1">
+            <div class="imf-label">ISSUE CATEGORY</div>
+            <div class="chip-wrap" id="categoryChips"></div>
+          </div>
+        </div>
+      </div>
+      <div class="imf-footer">
+        <div class="imf-count">Showing <strong id="imfShown">0</strong> / <strong id="imfTotal">0</strong> issues in scope
+          <span style="font-size:9px;color:var(--muted);margin-left:8px">· Filters applied to SLA Analysis, Outcome Summary &amp; Issue List</span>
+        </div>
+        <button class="btn-reset" onclick="resetFilters()">↺ Reset All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB NAV ── -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+    <button class="tab-btn" onclick="switchTab('sla')">SLA Analysis</button>
+    <button class="tab-btn" onclick="switchTab('issues')">Issue List</button>
+  </div>
+
+  <!-- ── OVERVIEW TAB ── -->
+  <div id="tab-overview" class="tab-pane active">
+    <div id="overviewEmpty" class="empty-msg card">
+      📂 Upload a CSV or Excel file above, then click <strong>⚙ Analyze</strong> to generate the dashboard.
+    </div>
+    <div class="hidden" id="overviewContent">
+      <div class="overview-grid" id="ovStats"></div>
+      <div class="card">
+        <div class="sec-title">📊 Status Distribution</div>
+        <canvas id="statusChart" height="80"></canvas>
+      </div>
+      <div class="card">
+        <div class="sec-title">📊 Severity Distribution</div>
+        <canvas id="sevChart" height="80"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLA ANALYSIS TAB ── -->
+  <div id="tab-sla" class="tab-pane">
+
+    <!-- SLA Breach -->
+    <div class="card" id="slaBreachCard">
+      <div class="sec-title">🚨 SLA BREACH — ACTIVE ISSUES (NOT CLOSED / CANCELLED)</div>
+      <div class="breach-boxes">
+        <div class="breach-box overdue">
+          <div class="breach-num" id="bOverdue">0</div>
+          <div class="breach-lbl">Overdue — past due date</div>
+        </div>
+        <div class="breach-box ontrack">
+          <div class="breach-num" id="bOntrack">0</div>
+          <div class="breach-lbl">On-Track — within due date</div>
+        </div>
+        <div class="breach-box nodate">
+          <div class="breach-num" id="bNoDate">0</div>
+          <div class="breach-lbl">No Due Date set</div>
+        </div>
+      </div>
+      <div class="ws-breakdown-title">OVERDUE BREAKDOWN BY WORK STREAM</div>
+      <div class="ws-bk-grid" id="wsBkGrid">
+        <span style="font-size:10px;color:var(--muted)">—</span>
+      </div>
+    </div>
+
+    <!-- Processing Time Chart -->
+    <div class="card">
+      <div class="sec-title">
+        📊 PROCESSING TIME DISTRIBUTION (DAYS CREATED — DUE)
+        <button class="chart-toggle-btn" onclick="toggleProcChart(this)">Hide ▲</button>
+      </div>
+      <div id="procChartWrap">
+        <canvas id="procChart" height="70"></canvas>
+      </div>
+    </div>
+
+
+    <!-- Top Overdue Issues -->
+    <div class="card">
+      <div class="sec-title">
+        ⏰ TOP OVERDUE ISSUES
+        <span class="badge" id="overdueCountBadge">0</span>
+      </div>
+      <div class="tbl-filter-bar">
+        <!-- Free-text search -->
+        <div class="od-search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="od-search-input" id="odSearchInput" type="text"
+            placeholder="Search issue key, summary, assignee…"
+            oninput="odSearchChanged(this.value)"
+            onkeydown="if(event.key==='Escape'){clearOdSearch();}">
+          <button class="od-search-clear" id="odSearchClear" onclick="clearOdSearch()" title="Clear search">✕</button>
+        </div>
+        <span class="od-search-count" id="odSearchCount"></span>
+        <label style="margin-left:6px">Module:</label>
+        <select class="tbl-filter-select" id="odModFilter" onchange="odPage=1;renderOverdueTable();renderOverview()">
+          <option value="">All Modules</option>
+        </select>
+        <label style="margin-left:4px">Severity:</label>
+        <select class="tbl-filter-select" id="odSevFilter" onchange="odPage=1;renderOverdueTable();renderOverview()">
+          <option value="">All Severities</option>
+          <option value="S1">S1 - Very high</option>
+          <option value="S2">S2 - High</option>
+          <option value="S3">S3 - Medium</option>
+          <option value="S4">S4 - Low</option>
+        </select>
+        <button class="tbl-filter-reset" onclick="resetOdFilters()">✕ Reset</button>
+      </div>
+      <div class="table-wrap">
+        <table id="overdueTable">
+          <thead><tr>
+            <th class="sortable" onclick="sortOverdue('key')">ISSUE KEY</th>
+            <th>SUMMARY</th>
+            <th class="sortable" onclick="sortOverdue('status')">STATUS</th>
+            <th>WORKSTREAM</th>
+            <th>TEST TYPE</th>
+            <th class="sortable" onclick="sortOverdue('category')">ISSUE CATEGORY</th>
+            <th class="sortable" onclick="sortOverdue('module')">MODULE</th>
+            <th>ASSIGNEE</th>
+            <th>CREATED</th>
+            <th>DUE DATE</th>
+            <th class="sortable" onclick="sortOverdue('daysOver')" title="Working days since Created vs Due Date">SLA BREACH</th>
+            <th>ACTIONS</th>
+          </tr></thead>
+          <tbody id="overdueTbody">
+            <tr><td colspan="12" class="empty-cell">No data loaded</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="overduePg"></div>
+    </div>
+
+  </div><!-- /tab-sla -->
+
+  <!-- ── ISSUE LIST TAB ── -->
+  <div id="tab-issues" class="tab-pane">
+
+    <!-- ── STATUS SUMMARY CARD ── -->
+    <div class="card">
+      <div class="sec-title">
+        📊 ISSUE COUNT BY STATUS
+        <span style="font-size:9px;font-weight:400;color:var(--muted);margin-left:4px">Overall &amp; Overdue Comparison · Click card to filter</span>
+        <div class="issue-view-toggles">
+          <button class="show-overdue-btn" id="showOverdueOnlyBtn" onclick="toggleOverdueOnly()" title="Show only overdue issues in table">⚠ Show Overdue Only: OFF</button>
+          <button class="excl-overdue-btn" id="exclOverdueBtn" onclick="toggleExclOverdue()" title="Exclude overdue issues from table">🚫 Exclude Overdue: OFF</button>
+        </div>
+      </div>
+      <!-- overall summary strip -->
+      <div class="status-sum-header" id="statusSumHeader" style="display:none">
+        <div class="ssh-item">
+          <div class="ssh-num" style="color:var(--primary)" id="sshTotal">0</div>
+          <div class="ssh-lbl">Total Issues</div>
+        </div>
+        <div class="ssh-divider"></div>
+        <div class="ssh-item">
+          <div class="ssh-num" style="color:var(--s1)" id="sshOverdue">0</div>
+          <div class="ssh-lbl">Overdue</div>
+        </div>
+        <div class="ssh-divider"></div>
+        <div class="ssh-item">
+          <div class="ssh-num" style="color:var(--green)" id="sshOntrack">0</div>
+          <div class="ssh-lbl">Non-Overdue</div>
+        </div>
+        <div class="ssh-divider"></div>
+        <div class="ssh-pct-bar">
+          <div class="ssh-bar-lbl" id="sshPctLbl">0% overdue</div>
+          <div class="ssh-bar-track"><div class="ssh-bar-fill" id="sshBarFill" style="width:0%"></div></div>
+          <div class="ssh-bar-lbl" style="color:var(--muted)" id="sshPctSub"></div>
+        </div>
+      </div>
+      <!-- per-status cards -->
+      <div class="status-sum-grid" id="statusSumGrid">
+        <span style="font-size:10px;color:var(--muted)">No data loaded</span>
+      </div>
+      <div class="status-sum-note" id="statusSumNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">
+        📋 ISSUE LIST
+        <span class="badge" id="issueCountBadge">0</span>
+        <span id="issStatusFilterBadge" style="display:none;font-size:9px;padding:1px 8px;border-radius:10px;background:rgba(37,99,235,.12);color:var(--primary);font-weight:600;margin-left:4px;cursor:pointer;" onclick="clearIssStatusFilter()">● Status: <span id="issStatusFilterLabel"></span> ✕</span>
+      </div>
+      <div class="tbl-filter-bar">
+        <div class="iss-search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="iss-search-input" id="issSearchInput" type="text"
+            placeholder="Search issue key, summary, assignee…"
+            oninput="issSearchChanged(this.value)"
+            onkeydown="if(event.key==='Escape'){clearIssSearch();}">
+          <button class="iss-search-clear" id="issSearchClear" onclick="clearIssSearch()" title="Clear search">✕</button>
+        </div>
+        <span class="iss-search-count" id="issSearchCount"></span>
+        <label style="margin-left:6px">Module:</label>
+        <select class="tbl-filter-select" id="issModFilter" onchange="issPage=1;renderIssueList()">
+          <option value="">All Modules</option>
+        </select>
+        <label style="margin-left:8px">Severity:</label>
+        <select class="tbl-filter-select" id="issSevFilter" onchange="issPage=1;renderIssueList()">
+          <option value="">All Severities</option>
+          <option value="S1">S1 - Very high</option>
+          <option value="S2">S2 - High</option>
+          <option value="S3">S3 - Medium</option>
+          <option value="S4">S4 - Low</option>
+        </select>
+        <button class="tbl-filter-reset" onclick="resetIssFilters()">✕ Reset</button>
+      </div>
+      <div class="table-wrap">
+        <table id="issueTable">
+          <thead><tr>
+            <th class="sortable" onclick="sortBy('key')">KEY</th>
+            <th>SUMMARY</th>
+            <th class="sortable" onclick="sortBy('status')">STATUS</th>
+            <th class="sortable" onclick="sortBy('sevCat')">SEVERITY</th>
+            <th class="sortable" onclick="sortBy('module')">MODULE</th>
+            <th>WORKSTREAM</th>
+            <th class="sortable" onclick="sortBy('category')">ISSUE CATEGORY</th>
+            <th>ASSIGNEE</th>
+            <th class="sortable" onclick="sortBy('created')">CREATED</th>
+            <th class="sortable" onclick="sortBy('due')">DUE DATE</th>
+            <th class="sortable" onclick="sortBy('ageDays')">AGE WD</th>
+            <th>ACTIONS</th>
+          </tr></thead>
+          <tbody id="issueTbody">
+            <tr><td colspan="12" class="empty-cell">No data loaded</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="issuePg"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- EXPORT BAR -->
+<div class="export-bar">
+  <div>
+    <div class="export-title">Export SLA Report</div>
+    <div class="export-sub">SLA Baseline · Issue Management Filter · SLA Breach · SLA Outcome Summary</div>
+  </div>
+  <div class="export-btns">
+    <button class="btn-export print" onclick="openPreview()">👁 Preview</button>
+    <div class="save-as-wrap">
+      <button class="btn-save-as" onclick="toggleSaveAsMenu(event)">💾 Save As ▾</button>
+      <div class="save-as-menu hidden" id="saveAsMenu">
+        <button class="save-as-item" onclick="exportXLSX();closeSaveAsMenu()"><span class="sai-icon">🟢</span>Excel (.xlsx)</button>
+        <button class="save-as-item" onclick="exportCSV();closeSaveAsMenu()"><span class="sai-icon">📊</span>CSV (.csv)</button>
+        <button class="save-as-item" onclick="exportPDF();closeSaveAsMenu()"><span class="sai-icon">📄</span>PDF Report</button>
+        <button class="save-as-item" onclick="window.print();closeSaveAsMenu()"><span class="sai-icon">🖨</span>Print / Save PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ── HISTORY TOOLTIP ── -->
+<div id="histTooltip">
+  <div class="ht-title">📋 History / Comments</div>
+  <div class="ht-body" id="histTooltipBody"></div>
+</div>
+
+<!-- ── NOTIFY MODAL ── -->
+<div class="notify-overlay hidden" id="notifyOverlay" onclick="handleNotifyOverlayClick(event)">
+  <div class="notify-modal" onclick="event.stopPropagation()">
+    <div class="notify-modal-hdr">
+      <div class="notify-modal-title">🔔 Notify to Resolve Issue</div>
+      <div style="font-size:10px;color:var(--muted);margin-left:6px" id="notifyIssueKey"></div>
+      <button class="notify-modal-close" onclick="closeNotifyModal()">✕</button>
+    </div>
+    <div class="notify-modal-body">
+      <div class="notify-tab-row">
+        <button class="notify-tab active" id="ntabEmail" onclick="switchNotifyTab('email')">✉ Email</button>
+        <button class="notify-tab" id="ntabTeams" onclick="switchNotifyTab('teams')">💬 MS Teams</button>
+      </div>
+      <div id="notifyEmailSection">
+        <div class="notify-field">
+          <div class="notify-label">To (Email Address)</div>
+          <input class="notify-input" id="notifyToEmail" type="email" placeholder="assignee@company.com or team@company.com">
+          <div class="notify-hint">Enter recipient email, or paste your Teams channel email address to post there.</div>
+        </div>
+      </div>
+      <div id="notifyTeamsSection" style="display:none">
+        <div class="notify-field">
+          <div class="notify-label">MS Teams Channel Email</div>
+          <input class="notify-input" id="notifyTeamsEmail" type="email" placeholder="channel@team.teams.ms">
+          <div class="notify-hint">Each Teams channel has an email address. Find it in Teams: ··· → Get email address. Save it here to reuse.</div>
+        </div>
+      </div>
+      <div class="notify-field">
+        <div class="notify-label">Subject</div>
+        <input class="notify-input" id="notifySubject" type="text">
+      </div>
+      <div class="notify-field">
+        <div class="notify-label">Message</div>
+        <textarea class="notify-textarea" id="notifyBody"></textarea>
+      </div>
+    </div>
+    <div class="notify-modal-footer">
+      <div class="notify-issue-meta" id="notifyIssueMeta"></div>
+      <button class="btn-notify-send btn-notify-email" id="notifySendBtn" onclick="sendNotification()">✉ Send Email</button>
+      <button class="btn-notify-send" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="closeNotifyModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── COMMENT MODAL ── -->
+<div class="comment-overlay hidden" id="commentOverlay" onclick="handleCommentOverlayClick(event)">
+  <div class="comment-modal" onclick="event.stopPropagation()">
+    <div class="comment-modal-hdr">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span class="comment-modal-key" id="cmKey">—</span>
+          <span style="font-size:9px;padding:1px 7px;border-radius:10px;background:rgba(37,99,235,.1);color:var(--primary);font-weight:600" id="cmStatus">—</span>
+        </div>
+        <div class="comment-modal-summary" id="cmSummary">—</div>
+      </div>
+      <button class="comment-modal-close" onclick="closeCommentModal()">✕ Close</button>
+    </div>
+    <div class="comment-meta-strip" id="cmMetaStrip"></div>
+    <div class="comment-modal-body" id="cmBody"></div>
+  </div>
+</div>
+
+<!-- ── PREVIEW MODAL ── -->
+<div class="preview-overlay hidden" id="previewOverlay" onclick="handleOverlayClick(event)">
+  <div class="preview-modal">
+    <div class="preview-modal-hdr">
+      <div class="preview-modal-title">👁 Export Preview</div>
+      <div style="font-size:11px;color:var(--muted);margin-left:8px" id="previewSubtitle"></div>
+      <button class="preview-modal-close" onclick="closePreview()" title="Close">✕ Close</button>
+    </div>
+    <div class="preview-modal-body">
+      <div id="previewTableWrap"></div>
+    </div>
+    <div class="preview-modal-footer">
+      <div class="preview-meta" id="previewMeta"></div>
+      <button class="btn-export print" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="exportXLSX()">🟢 Excel (.xlsx)</button>
+      <button class="btn-export csv" onclick="exportCSV()">📊 CSV</button>
+      <button class="btn-export pdf" id="pdfBtnPrev" onclick="exportPDF()">📄 PDF</button>
+      <button class="btn-export print" onclick="window.print()">🖨 Print</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  CONFIGURATION
+// ══════════════════════════════════════════════════════════
+
+const TH_HOL_DEFAULT = [
+  '2025-01-01','2025-02-26','2025-04-06','2025-04-13','2025-04-14','2025-04-15',
+  '2025-05-01','2025-05-22','2025-07-28','2025-07-29','2025-08-12',
+  '2025-10-13','2025-10-14','2025-10-23','2025-12-05','2025-12-10','2025-12-31',
+  '2026-01-01','2026-02-26','2026-04-06','2026-04-13','2026-04-14','2026-04-15',
+  '2026-05-01','2026-07-28','2026-08-12','2026-10-13','2026-10-23','2026-12-05',
+  '2026-12-10','2026-12-31',
+];
+let TH_HOLIDAYS = new Set((() => {
+  try { return JSON.parse(localStorage.getItem('uat_holidays')) || TH_HOL_DEFAULT; } catch { return TH_HOL_DEFAULT; }
+})());
+
+// SLA targets (days) — editable via card inputs
+let SLA_TARGETS = (() => {
+  try { return JSON.parse(localStorage.getItem('uat_sla_targets')) || null; } catch { return null; }
+})() || { S1:{min:0,max:1}, S2:{min:2,max:5}, S3:{min:6,max:10}, S4:{min:11,max:9999} };
+
+// Column map: field → CSV column name
+const COL_FIELDS = ['key','sum','sta','sev','ws','test','cat','mod','asg','cre','due','ref','hist'];
+const COL_LABELS = {
+  key:'Issue Key', sum:'Summary', sta:'Status', sev:'Severity',
+  ws:'Workstream', test:'Test Type', cat:'Issue Category', mod:'Module / Function',
+  asg:'Assignee', cre:'Created Date', due:'Due Date', ref:'Test Reference',
+  hist:'History / Comments'
+};
+// Multiple hint variants per field (ordered by priority)
+const COL_HINTS = {
+  key:  ['issue key','key','id','ticket'],
+  sum:  ['summary','subject','title','description','name'],
+  sta:  ['issue status','status','current status','state','resolution','ticket status','jira status','status name','workflow status'],
+  sev:  ['severity','priority','sev level','urgency','impact'],
+  ws:   ['workstream','work stream','team','department','stream','area'],
+  test: ['test type','test case type','test category'],
+  cat:  ['issue category','issue class','issue classification','bug category','defect category','problem category'],
+  mod:  ['module','function','component','feature','sub-system','system'],
+  asg:  ['assignee','assigned to','owner','person','responsible'],
+  cre:  ['created','create date','creation date','reported','logged'],
+  due:  ['due date','due','deadline','target date','resolve by','target'],
+  ref:  ['reference','test reference','test ref','test id','jira'],
+  hist: ['history','comment','comments','changelog','change log','activity','log','update','updates','notes','remark','remarks'],
+};
+let colMap = (() => {
+  try { return JSON.parse(localStorage.getItem('uat_col_map')) || {}; } catch { return {}; }
+})();
+
+// Jira base URL — default to PTTGC Atlassian instance
+const JIRA_DEFAULT = 'https://pttgc.atlassian.net';
+let JIRA_BASE = localStorage.getItem('uat_jira_url') || JIRA_DEFAULT;
+// Board URL (list view)
+const JIRA_BOARD = 'https://pttgc.atlassian.net/jira/software/projects/UATI/list';
+
+function issueUrl(key) {
+  if (!key) return '#';
+  const base = (JIRA_BASE || JIRA_DEFAULT).replace(/\/+$/, '');
+  return `${base}/browse/${encodeURIComponent(key)}`;
+}
+
+function setJiraBase(url) {
+  JIRA_BASE = (url || JIRA_DEFAULT).trim();
+  try { localStorage.setItem('uat_jira_url', JIRA_BASE); } catch(e) {}
+  // Update board links
+  const bl = document.getElementById('boardLink');
+  if (bl) bl.href = JIRA_BOARD;
+  const bli = document.getElementById('boardLinkInline');
+  if (bli) bli.href = JIRA_BOARD;
+}
+
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+
+let rawRows = [], csvHeaders = [];
+let allData = [], baseData = [];
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+
+const FILT = { status: new Set(), ws: '', testType: new Set(), sev: new Set(), sevCat: '', cat: new Set() };
+let odPage = 1, issPage = 1;
+const PAGE = 25;
+let _sortField = 'key', _sortDir = 1;
+let _odSortField = 'daysOver', _odSortDir = -1; // default: most overdue first
+let _odSearchText = '';   // free-text search in TOP OVERDUE
+let _issSearchText = '';  // free-text search in ISSUE LIST
+let _issExclOverdue   = false;  // toggle: exclude overdue from Issue List
+let _issOverdueOnly   = false;  // toggle: show ONLY overdue issues in Issue List
+let _issStatusFilter  = '';     // filter Issue List by specific status (status-summary click)
+let _charts = {};
+let _colMapOpen = false;
+let _procChartVisible = true;
+
+// ══════════════════════════════════════════════════════════
+//  DATE UTILITIES
+// ══════════════════════════════════════════════════════════
+
+const MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+
+function parseDate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  let m;
+  // ISO: 2022-09-25
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  // Jira: 25/Sep/22 or 25/Sep/2022
+  m = s.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{2,4})/);
+  if (m) {
+    const mon = MON[m[2].toLowerCase()];
+    if (mon) {
+      const yr = +m[3] < 100 ? 2000 + +m[3] : +m[3];
+      return new Date(yr, mon-1, +m[1]);
+    }
+  }
+  // DD/MM/YYYY or MM/DD/YYYY
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) {
+    // Assume DD/MM/YYYY for Jira Thai export
+    return new Date(+m[3], +m[2]-1, +m[1]);
+  }
+  // Excel date serial number
+  if (/^\d+$/.test(s) && +s > 40000) {
+    const d = new Date(Date.UTC(1899,11,30) + +s * 86400000);
+    return d;
+  }
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function dateStr(d) {
+  if (!d) return '';
+  return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`;
+}
+
+function workingDays(start, end) {
+  if (!start || !end) return null;
+  const s = new Date(start); s.setHours(0,0,0,0);
+  const e = new Date(end);   e.setHours(0,0,0,0);
+  if (e <= s) return 0;
+  let n = 0, cur = new Date(s);
+  while (cur < e) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6 && !TH_HOLIDAYS.has(dateStr(cur))) n++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return n;
+}
+
+// ══════════════════════════════════════════════════════════
+//  SLA LOGIC
+// ══════════════════════════════════════════════════════════
+
+const SEV_KEYWORDS = {
+  S1: ['s1','critical','very high','blocker'],
+  S2: ['s2','high'],
+  S3: ['s3','medium','normal'],
+  S4: ['s4','low','minor','trivial'],
+};
+
+function getSevCat(sev) {
+  if (!sev) return 'none';
+  const v = sev.toLowerCase();
+  for (const [cat, kws] of Object.entries(SEV_KEYWORDS)) {
+    if (kws.some(k => v.includes(k))) return cat;
+  }
+  return 'none';
+}
+
+function getSLAMax(cat) {
+  return (SLA_TARGETS[cat] || {}).max || 9999;
+}
+
+// ══════════════════════════════════════════════════════════
+//  FILE LOADING
+// ══════════════════════════════════════════════════════════
+
+function handleDrop(e) {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+}
+
+function handleFileSelect(e) {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+}
+
+function processFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'array', cellDates:true});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
+        if (!data.length) { toast('Excel sheet is empty'); return; }
+        const rawHeaders = Object.keys(data[0]);
+        csvHeaders = rawHeaders.map(h => h.trim()); // trim whitespace from Excel column names
+        rawRows = data.map(r => { const o={}; rawHeaders.forEach((h,i)=>{o[csvHeaders[i]]=r[h]!=null?String(r[h]).trim():''}); return o; });
+        onFileLoaded(file.name);
+      } catch(err) { toast('❌ Excel error: '+err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = ev => parseCSVText(ev.target.result, file.name);
+    reader.readAsText(file);
+  }
+}
+
+function parseCSVText(text, name) {
+  function splitLine(l) {
+    const r=[]; let c='',q=false;
+    for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){q=!q;}else if(ch===','&&!q){r.push(c.trim());c='';}else{c+=ch;}}
+    r.push(c.trim()); return r;
+  }
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) { toast('Invalid CSV'); return; }
+  csvHeaders = splitLine(lines[0]).map(h => h.replace(/^"|"$/g,''));
+  rawRows = [];
+  for (let i=1; i<lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cells = splitLine(lines[i]);
+    const row = {};
+    csvHeaders.forEach((h,idx) => { row[h] = (cells[idx]||'').replace(/^"|"$/g,''); });
+    rawRows.push(row);
+  }
+  onFileLoaded(name);
+}
+
+function onFileLoaded(name) {
+  document.getElementById('uploadZone').classList.add('hidden');
+  document.getElementById('fileInfoBar').classList.remove('hidden');
+  document.getElementById('fileName').textContent = name;
+  document.getElementById('fileRows').textContent = rawRows.length + ' issues detected';
+  buildColMapUI();
+  autoDetectColMap();
+  heuristicDetectStatus();   // fallback: detect Status column by value patterns
+  refreshAllColPreviews();   // update preview labels after auto-detect
+  // Auto-open column mapping so user can verify
+  _colMapOpen = true;
+  document.getElementById('colMapPanel').classList.remove('hidden');
+  toast('✅ ' + rawRows.length + ' rows loaded — verify column mapping below then click Analyze');
+}
+
+// ══════════════════════════════════════════════════════════
+//  COLUMN MAPPING
+// ══════════════════════════════════════════════════════════
+
+function getColPreview(colName) {
+  if (!colName) return '';
+  // Show up to 3 distinct non-empty values as preview
+  const seen = new Set();
+  for (const r of rawRows) {
+    if (seen.size >= 3) break;
+    const v = cleanVal(r[colName]);
+    if (v) seen.add(v);
+  }
+  return seen.size ? [...seen].join(' · ') : '(no values)';
+}
+
+function buildColMapUI() {
+  const grid = document.getElementById('colMapGrid');
+  grid.innerHTML = COL_FIELDS.map(f => {
+    const currentCol = colMap[f] || '';
+    return `<div class="col-map-row">
+      <div class="col-map-label">${COL_LABELS[f]}</div>
+      <select class="col-map-select" id="cm_${f}" onchange="updateColPreview('${f}')">
+        <option value="">— select column —</option>
+        ${csvHeaders.map(h=>`<option value="${esc(h)}"${h===currentCol?' selected':''}>${esc(h)}</option>`).join('')}
+      </select>
+      <div class="col-preview" id="cp_${f}"></div>
+    </div>`;
+  }).join('');
+}
+
+function updateColPreview(f) {
+  const sel = document.getElementById('cm_'+f);
+  const prev = document.getElementById('cp_'+f);
+  if (!sel || !prev) return;
+  const preview = getColPreview(sel.value);
+  prev.textContent = preview ? '↳ '+preview : '';
+  // Highlight all Analyze buttons to remind user to re-analyze
+  document.querySelectorAll('.btn-analyze').forEach(b => {
+    b.style.background = '#dc2626';
+    b.innerHTML = '⚙ Re-Analyze!';
+  });
+}
+
+function autoDetectColMap() {
+  const headersLow = csvHeaders.map(h => h.toLowerCase().trim());
+  COL_FIELDS.forEach(f => {
+    if (colMap[f] && csvHeaders.includes(colMap[f])) return; // already mapped
+    const hints = COL_HINTS[f]; // now always an array
+    let found = '';
+    // Pass 1: exact match (header === hint)
+    for (const hint of hints) {
+      const idx = headersLow.indexOf(hint);
+      if (idx >= 0) { found = csvHeaders[idx]; break; }
+    }
+    // Pass 2: header includes hint
+    if (!found) {
+      for (const hint of hints) {
+        const idx = headersLow.findIndex(h => h.includes(hint));
+        if (idx >= 0) { found = csvHeaders[idx]; break; }
+      }
+    }
+    // Pass 3: hint includes header (e.g. short column name like "Stat" matching hint "status")
+    if (!found) {
+      for (const hint of hints) {
+        const idx = headersLow.findIndex(h => h.length >= 4 && hint.includes(h));
+        if (idx >= 0) { found = csvHeaders[idx]; break; }
+      }
+    }
+    if (found) {
+      colMap[f] = found;
+      const el = document.getElementById('cm_'+f);
+      if (el) el.value = found;
+    }
+  });
+}
+
+// Heuristic fallback: if Status column still not mapped, scan columns for status-like values
+function heuristicDetectStatus() {
+  if (colMap['sta'] && csvHeaders.includes(colMap['sta'])) return; // already mapped
+  const STATUS_WORDS = /^(open|closed|in progress|done|resolved|reopened|cancelled|canceled|to do|blocked|on hold|new|active|pending|testing|passed|failed|deferred)/i;
+  const alreadyUsed = new Set(Object.values(colMap).filter(Boolean));
+  for (const h of csvHeaders) {
+    if (alreadyUsed.has(h)) continue;
+    // Count how many rows have status-like values in this column
+    let matches = 0, checked = 0;
+    for (const r of rawRows) {
+      if (checked >= 50) break;
+      const v = cleanVal(r[h]);
+      if (v) { checked++; if (STATUS_WORDS.test(v.trim())) matches++; }
+    }
+    if (checked > 0 && matches / checked >= 0.4) {
+      colMap['sta'] = h;
+      const el = document.getElementById('cm_sta');
+      if (el) el.value = h;
+      return;
+    }
+  }
+}
+
+// Refresh all preview labels after auto-detect runs
+function refreshAllColPreviews() {
+  COL_FIELDS.forEach(f => {
+    const sel = document.getElementById('cm_'+f);
+    const prev = document.getElementById('cp_'+f);
+    if (!sel || !prev) return;
+    const preview = getColPreview(sel.value);
+    prev.textContent = preview ? '↳ '+preview : '';
+  });
+}
+
+function readColMap() {
+  COL_FIELDS.forEach(f => {
+    const el = document.getElementById('cm_'+f);
+    if (el) colMap[f] = el.value;
+  });
+}
+
+function saveColMap() {
+  readColMap();
+  localStorage.setItem('uat_col_map', JSON.stringify(colMap));
+  document.getElementById('mapStatus').textContent = '✓ Saved';
+  setTimeout(()=>{ const el=document.getElementById('mapStatus'); if(el) el.textContent=''; }, 2000);
+}
+
+function toggleColMap() {
+  _colMapOpen = !_colMapOpen;
+  document.getElementById('colMapPanel').classList.toggle('hidden', !_colMapOpen);
+}
+
+// ══════════════════════════════════════════════════════════
+//  DATA ANALYSIS
+// ══════════════════════════════════════════════════════════
+
+function analyzeData() {
+  readColMap();
+  // Reset Analyze button styling
+  document.querySelectorAll('.btn-analyze').forEach(b => {
+    b.style.background = '';
+    b.innerHTML = b.dataset.orig || '⚙ Analyze';
+  });
+  if (!rawRows.length) { toast('No data — upload a file first'); return; }
+
+  const g = f => colMap[f] || '';
+  const cv = (r, f) => cleanVal(r[g(f)]);   // cleaned value getter
+  allData = rawRows.map(r => {
+    const created = parseDate(r[g('cre')]);
+    const due     = parseDate(r[g('due')]);
+    const ageDays = workingDays(created, TODAY);
+    const dueDays = due ? workingDays(created, due) : null;
+    const daysOver = (ageDays !== null && dueDays !== null && ageDays > dueDays) ? ageDays - dueDays : 0;
+    const sev = cv(r,'sev');
+    const sevCat = getSevCat(sev);
+    return {
+      key:        cv(r,'key'),
+      summary:    cv(r,'sum'),
+      status:     cv(r,'sta'),
+      severity:   sev,
+      sevCat,
+      workstream: cv(r,'ws'),
+      testType:   cv(r,'test'),
+      category:   cv(r,'cat'),
+      module:     cv(r,'mod'),
+      assignee:   cv(r,'asg'),
+      ref:        cv(r,'ref'),
+      history:    cv(r,'hist'),
+      created, due,
+      ageDays,
+      dueDays,
+      daysOver,
+    };
+  });
+
+  buildFilterOptions();
+  applyFilters();
+  // Auto-switch to SLA tab if not already there
+  if (!document.getElementById('tab-sla').classList.contains('active')) {
+    switchTab('sla');
+  }
+  toast('✅ Analysis complete — ' + allData.length + ' issues processed');
+}
+
+// ══════════════════════════════════════════════════════════
+//  FILTER LOGIC
+// ══════════════════════════════════════════════════════════
+
+// Detect and strip Jira ADF (Atlassian Document Format) or JSON-like garbage values
+// Extract readable text from Jira JSON / ADF values
+function cleanVal(v) {
+  if (v == null || v === '') return '';
+  const s = String(v).trim();
+  if (!s) return '';
+
+  // If it looks like JSON, try to extract a meaningful label
+  if (s.startsWith('{') || s.startsWith('[')) {
+    try {
+      const obj = JSON.parse(s);
+      if (Array.isArray(obj)) {
+        // Array of objects → join their names
+        return obj.map(o => o.name || o.value || o.displayName || '').filter(Boolean).join(', ');
+      }
+      if (obj && typeof obj === 'object') {
+        // Jira field object → prefer name > value > displayName
+        if (obj.name)        return String(obj.name).trim();
+        if (obj.value)       return String(obj.value).trim();
+        if (obj.displayName) return String(obj.displayName).trim();
+        if (obj.key)         return String(obj.key).trim();
+      }
+    } catch (e) {/* not valid JSON — fall through */}
+
+    // Unparseable ADF-like garbage (content/type/attrs)
+    if (/type|content|attrs/.test(s)) return '';
+    // Still looks like a raw object literal — skip
+    if (/^\{[^}]{0,5}\}$/.test(s)) return ''; // e.g. "attrs:{}"
+    // Otherwise keep as-is (might be a legitimate value starting with { like Jira priorities)
+  }
+
+  // Catch ADF/JSON fragments that DON'T start with { or [ but are still garbage
+  // e.g. "content:[{type:tableCell", "background:#ffffff}", "text:Document Review}}}}"
+  if (/content:\[|background:#[0-9a-f]/i.test(s)) return '';
+  // "word:" ending (partial ADF key like "OrganizationName2:")
+  if (/^\w[\w\s]*:$/.test(s.trim())) return '';
+  // "word:value" pattern with multiple colons or braces = serialized object fragment
+  if ((s.match(/:/g)||[]).length >= 2 && /[{}\[\]]/.test(s)) return '';
+  // Very long values with embedded key:value pairs = likely ADF/rich-text dump
+  if (s.length > 80 && /\w+:\w/.test(s) && /[{}\[\]]/.test(s)) return '';
+
+  return s;
+}
+
+// Only truly garbage values (empty or failed extraction)
+function isJunkVal(s) {
+  if (!s || !String(s).trim()) return true;
+  const t = String(s).trim();
+  // Catch ADF-style serialized values that slipped through cleanVal
+  if (/^\w[\w\s]*:$/.test(t)) return true;                          // "OrganizationName2:"
+  if (/\w+:\d{5,}/.test(t)) return true;                            // "PersonnelNumber:26009154"
+  if (content_like(t)) return true;
+  return false;
+}
+function content_like(t) {
+  // patterns: "word:[", "word:{", "background:#", closing braces galore
+  return /content:\[|\w+:\{|background:#[0-9a-f]{3,}/i.test(t) ||
+         (t.includes(':') && /[{}\[\]]/.test(t) && t.length > 40);
+}
+
+function buildFilterOptions() {
+  const statuses   = [...new Set(allData.map(d=>d.status).filter(v=>v&&!isJunkVal(v)))].sort();
+  const workstreams= [...new Set(allData.map(d=>d.workstream).filter(v=>v&&!isJunkVal(v)))].sort();
+  const testTypes  = [...new Set(allData.map(d=>d.testType).filter(v=>v&&!isJunkVal(v)))].sort();
+  const severities = [...new Set(allData.map(d=>d.severity).filter(v=>v&&!isJunkVal(v)))].sort();
+  const categories = [...new Set(allData.map(d=>d.category).filter(v=>v&&!isJunkVal(v)))].sort();
+
+  buildChips('statusChips', statuses, 'status');
+  buildChips('testTypeChips', testTypes, 'testType');
+  buildChips('severityChips', severities, 'sev');
+  buildChips('categoryChips', categories, 'cat');
+
+  const ws = document.getElementById('wsFilter');
+  ws.innerHTML = '<option value="">— All Workstreams —</option>' +
+    workstreams.map(w=>`<option value="${esc(w)}">${esc(w)}</option>`).join('');
+  ws.value = FILT.ws;
+
+  buildModuleFilters();
+}
+
+// Use data-attributes to avoid HTML-escaping breaking onclick strings
+function buildChips(containerId, values, filtKey) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  const allActive = FILT[filtKey].size === 0;
+  wrap.innerHTML = `<span class="chip all-chip ${allActive?'active':''}" data-fk="${filtKey}" data-all="1" onclick="chipClick(this)">All</span>` +
+    values.map(v => {
+      const active = FILT[filtKey].has(v) ? 'active' : '';
+      return `<span class="chip ${active}" data-fk="${filtKey}" data-v="${esc(v)}" onclick="chipClick(this)">${esc(v)}</span>`;
+    }).join('');
+}
+
+function chipClick(el) {
+  const fk = el.dataset.fk;
+  if (el.dataset.all) {
+    FILT[fk].clear();
+  } else {
+    const v = el.dataset.v;
+    if (FILT[fk].has(v)) FILT[fk].delete(v); else FILT[fk].add(v);
+  }
+  applyFilters();
+}
+
+function resetFilters() {
+  FILT.status.clear(); FILT.ws = ''; FILT.testType.clear(); FILT.sev.clear(); FILT.sevCat = ''; FILT.cat.clear();
+  document.getElementById('wsFilter').value = '';
+  ['odModFilter','odSevFilter','issModFilter','issSevFilter'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  // Reset status filter / overdue toggles
+  _issStatusFilter = ''; _issOverdueOnly = false;
+  const badge = document.getElementById('issStatusFilterBadge');
+  if (badge) badge.style.display = 'none';
+  const odOnlyBtn = document.getElementById('showOverdueOnlyBtn');
+  if (odOnlyBtn) { odOnlyBtn.textContent = '⚠ Show Overdue Only: OFF'; odOnlyBtn.classList.remove('active'); }
+  buildFilterOptions();
+  applyFilters();
+  // clear SLA card filter highlight
+  document.querySelectorAll('.sla-card').forEach(c=>c.classList.remove('active-filter'));
+}
+
+function applyFilters() {
+  const ws = document.getElementById('wsFilter');
+  if (ws) FILT.ws = ws.value;
+
+  baseData = allData.filter(d => {
+    if (FILT.status.size && !FILT.status.has(d.status)) return false;
+    if (FILT.ws && d.workstream !== FILT.ws) return false;
+    if (FILT.testType.size && !FILT.testType.has(d.testType)) return false;
+    if (FILT.sev.size && !FILT.sev.has(d.severity)) return false;
+    if (FILT.sevCat && d.sevCat !== FILT.sevCat) return false;
+    if (FILT.cat.size && !FILT.cat.has(d.category)) return false;
+    return true;
+  });
+
+  document.getElementById('imfShown').textContent = baseData.length;
+  document.getElementById('imfTotal').textContent = allData.length;
+
+  // Rebuild chips to reflect active state
+  if (allData.length) buildFilterOptions();
+
+  odPage = 1; issPage = 1;
+  _odSearchText = ''; _issSearchText = '';
+  // Clear search inputs if present
+  ['odSearchInput','issSearchInput'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['odSearchClear','issSearchClear'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.remove('show'); });
+  ['odSearchCount','issSearchCount'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent=''; });
+  renderAll();
+}
+
+function quickFilterSev(cat) {
+  if (FILT.sevCat === cat) {
+    FILT.sevCat = '';
+    document.querySelectorAll('.sla-card').forEach(c=>c.classList.remove('active-filter'));
+  } else {
+    FILT.sevCat = cat;
+    document.querySelectorAll('.sla-card').forEach(c=>c.classList.remove('active-filter'));
+    const card = document.querySelector(`.sla-card.s${cat[1].toLowerCase()}`);
+    if (card) card.classList.add('active-filter');
+  }
+  applyFilters();
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER ALL
+// ══════════════════════════════════════════════════════════
+
+function renderAll() {
+  renderSLABaseline();
+  renderOverview();
+  renderSLABreachSection();
+  renderProcessingTimeChart();
+
+  renderOverdueTable();
+  renderStatusSummary();
+  renderIssueList();
+}
+
+// ── SLA BASELINE CARDS ──
+function renderSLABaseline() {
+  const cats = ['S1','S2','S3','S4'];
+  const names = {S1:'Critical',S2:'High',S3:'Medium',S4:'Low'};
+  const data = {};
+  cats.forEach(c => { data[c] = {total:0,active:0,meet:0,breach:0,closed:0}; });
+
+  allData.forEach(d => {
+    const c = d.sevCat;
+    if (!data[c]) return;
+    data[c].total++;
+    const isClosed = /closed|cancelled/i.test(d.status);
+    if (isClosed) { data[c].closed++; return; }
+    data[c].active++;
+    const age = d.ageDays;
+    const max = getSLAMax(c);
+    if (age !== null) {
+      if (age <= max) data[c].meet++; else data[c].breach++;
+    }
+  });
+
+  const grid = document.getElementById('slaGrid');
+  grid.innerHTML = cats.map(c => {
+    const s = data[c];
+    const sn = c[1].toLowerCase(); // 1,2,3,4
+    const t = SLA_TARGETS[c];
+    let rangeHtml = '';
+    if (c === 'S1') {
+      rangeHtml = `<div class="sla-range"><label>≤</label><input type="number" id="sla_${c}_max" value="${t.max}" min="1" max="99" onchange="updateSLATarget('${c}')" onclick="event.stopPropagation()"><span>days</span></div>`;
+    } else if (c === 'S4') {
+      rangeHtml = `<div class="sla-range"><label>></label><input type="number" id="sla_${c}_min" value="${t.min}" min="1" max="999" onchange="updateSLATarget('${c}')" onclick="event.stopPropagation()"><span>days</span></div>`;
+    } else {
+      rangeHtml = `<div class="sla-range">
+        <label>Min</label><input type="number" id="sla_${c}_min" value="${t.min}" min="1" max="99" onchange="updateSLATarget('${c}')" onclick="event.stopPropagation()">
+        <label>Max</label><input type="number" id="sla_${c}_max" value="${t.max}" min="1" max="99" onchange="updateSLATarget('${c}')" onclick="event.stopPropagation()">
+        <span>days</span>
+      </div>`;
+    }
+    return `<div class="sla-card s${sn}" onclick="quickFilterSev('${c}')">
+      <div class="sla-hdr sla-s${sn}">
+        <span class="sla-lv">${c}</span>
+        <span class="sla-name">${names[c]}</span>
+      </div>
+      ${rangeHtml}
+      <div class="sla-stats">
+        <div class="sla-stat"><span class="sla-dot active"></span><span class="sla-stat-num">${s.active}</span>&nbsp;Active</div>
+        <div class="sla-stat"><span class="sla-dot meet"></span><span class="sla-stat-num">${s.meet}</span>&nbsp;Meet SLA</div>
+        <div class="sla-stat"><span class="sla-dot breach"></span><span class="sla-stat-num">${s.breach}</span>&nbsp;Breach</div>
+        <div class="sla-stat"><span class="sla-dot closed"></span><span class="sla-stat-num">${s.closed}</span>&nbsp;Closed</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateSLATarget(cat) {
+  const minEl = document.getElementById('sla_'+cat+'_min');
+  const maxEl = document.getElementById('sla_'+cat+'_max');
+  if (minEl) SLA_TARGETS[cat].min = parseInt(minEl.value)||0;
+  if (maxEl) SLA_TARGETS[cat].max = parseInt(maxEl.value)||1;
+  localStorage.setItem('uat_sla_targets', JSON.stringify(SLA_TARGETS));
+  if (allData.length) { applyFilters(); }
+}
+
+// ── OVERVIEW ──
+function renderOverview() {
+  const empty = document.getElementById('overviewEmpty');
+  const content = document.getElementById('overviewContent');
+  if (!allData.length) { empty.classList.remove('hidden'); content.classList.add('hidden'); return; }
+  empty.classList.add('hidden'); content.classList.remove('hidden');
+
+  // Summary stats
+  const active = baseData.filter(d => !/closed|cancelled/i.test(d.status));
+  const closed = baseData.filter(d => /closed|cancelled/i.test(d.status));
+  // Overdue count synced with ⏰ TOP OVERDUE ISSUES (respects odMod / odSev table filters)
+  const odMod = (document.getElementById('odModFilter')||{}).value || '';
+  const odSev = (document.getElementById('odSevFilter')||{}).value || '';
+  const overdue = baseData
+    .filter(d => d.daysOver > 0 && !/closed|cancelled/i.test(d.status))
+    .filter(d => !odMod || d.module === odMod)
+    .filter(d => !odSev || d.sevCat === odSev);
+  const overdueLabel = (odMod || odSev)
+    ? `Overdue Issues${odMod?' ['+odMod+']':''}${odSev?' ['+odSev+']':''}`
+    : 'Overdue Issues';
+  document.getElementById('ovStats').innerHTML = [
+    {n:baseData.length, l:'Total Issues', c:'var(--primary)'},
+    {n:active.length, l:'Active Issues', c:'var(--s2)'},
+    {n:overdue.length, l:overdueLabel, c:'var(--s1)'},
+    {n:closed.length, l:'Closed / Cancelled', c:'var(--s4)'},
+  ].map(s=>`<div class="ov-stat"><div class="ov-num" style="color:${s.c}">${s.n}</div><div class="ov-lbl">${s.l}</div></div>`).join('');
+
+  // Status chart
+  const statCounts = {};
+  baseData.forEach(d=>{ statCounts[d.status]=(statCounts[d.status]||0)+1; });
+  renderBarChart('statusChart', Object.keys(statCounts), Object.values(statCounts), 'Status');
+
+  // Severity chart
+  const sevCounts = {S1:0,S2:0,S3:0,S4:0,Other:0};
+  baseData.forEach(d=>{
+    const k = ['S1','S2','S3','S4'].includes(d.sevCat) ? d.sevCat : 'Other';
+    sevCounts[k]++;
+  });
+  renderBarChart('sevChart', Object.keys(sevCounts), Object.values(sevCounts), 'Severity',
+    ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--muted)']);
+}
+
+function renderBarChart(id, labels, data, label, colors) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (_charts[id]) _charts[id].destroy();
+  const bg = colors || labels.map((_,i)=>`hsl(${220+i*25},70%,55%)`);
+  _charts[id] = new Chart(ctx, {
+    type:'bar',
+    data:{labels,datasets:[{label,data,backgroundColor:bg,borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}
+  });
+}
+
+// ── SLA BREACH SECTION ──
+function renderSLABreachSection() {
+  const active = baseData.filter(d => !/closed|cancelled/i.test(d.status));
+  let overdue=0, ontrack=0, nodate=0;
+  const wsCounts = {};
+  active.forEach(d => {
+    if (!d.due) { nodate++; return; }
+    if (d.daysOver > 0) {
+      overdue++;
+      const ws = d.workstream || 'Unknown';
+      wsCounts[ws] = (wsCounts[ws]||0)+1;
+    } else {
+      ontrack++;
+    }
+  });
+
+  document.getElementById('bOverdue').textContent = overdue;
+  document.getElementById('bOntrack').textContent = ontrack;
+  document.getElementById('bNoDate').textContent = nodate;
+
+  // Workstream breakdown
+  const sorted = Object.entries(wsCounts).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('wsBkGrid').innerHTML = sorted.length
+    ? sorted.map(([ws,cnt])=>`<div class="ws-bk-item">
+        <div><div class="ws-bk-cnt">${cnt}</div><div class="ws-bk-sub">overdue</div></div>
+        <div class="ws-bk-name">${esc(ws)}</div>
+      </div>`).join('')
+    : '<span style="font-size:10px;color:var(--muted)">No overdue issues</span>';
+}
+
+// ── PROCESSING TIME CHART ──
+function renderProcessingTimeChart() {
+  const ctx = document.getElementById('procChart');
+  if (!ctx) return;
+  if (_charts['proc']) _charts['proc'].destroy();
+
+  // Distribution of processing time (created → due) in working days
+  const buckets = [
+    {label:'≤5d',min:0,max:5},{label:'6–10d',min:6,max:10},
+    {label:'11–20d',min:11,max:20},{label:'21–40d',min:21,max:40},
+    {label:'41–60d',min:41,max:60},{label:'61–90d',min:61,max:90},
+    {label:'>90d',min:91,max:9999},
+  ];
+  const counts = buckets.map(()=>0);
+  baseData.forEach(d=>{
+    if (d.dueDays == null) return;
+    const b = buckets.findIndex(b=>d.dueDays<=b.max && d.dueDays>=b.min);
+    if (b>=0) counts[b]++;
+  });
+
+  _charts['proc'] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: buckets.map(b=>b.label),
+      datasets:[{
+        label:'Issues',data:counts,
+        backgroundColor:'rgba(37,99,235,.6)',
+        borderColor:'rgba(37,99,235,.9)',
+        borderWidth:1,borderRadius:4,borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10}}},
+        x:{grid:{display:false},ticks:{font:{size:10}}}
+      }
+    }
+  });
+}
+
+function toggleProcChart(btn) {
+  _procChartVisible = !_procChartVisible;
+  document.getElementById('procChartWrap').classList.toggle('hidden', !_procChartVisible);
+  btn.textContent = _procChartVisible ? 'Hide ▲' : 'Show ▼';
+}
+
+
+// ── BUILD MODULE DROPDOWNS ──
+function buildModuleFilters() {
+  const modules = [...new Set(allData.map(d=>d.module).filter(v=>v))].sort();
+  ['odModFilter','issModFilter'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Modules</option>' +
+      modules.map(m=>`<option value="${esc(m)}"${m===cur?' selected':''}>${esc(m)}</option>`).join('');
+  });
+}
+
+// ── SORT HEADER UTILS ──
+function updateSortHeaders(tableId, field, dir) {
+  const tbl = document.getElementById(tableId);
+  if (!tbl) return;
+  tbl.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.getAttribute('onclick') && th.getAttribute('onclick').includes(`'${field}'`)) {
+      th.classList.add(dir === 1 ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function tableSort(a, b, field, dir) {
+  const av = a[field], bv = b[field];
+  if (av == null && bv == null) return 0;
+  if (av == null) return 1; if (bv == null) return -1;
+  if (typeof av === 'number') return (av - bv) * dir;
+  return String(av).localeCompare(String(bv)) * dir;
+}
+
+// ── OVERDUE TABLE ──
+function renderOverdueTable() {
+  const odMod = (document.getElementById('odModFilter')||{}).value || '';
+  const odSev = (document.getElementById('odSevFilter')||{}).value || '';
+  const q = _odSearchText.toLowerCase().trim();
+
+  let overdue = baseData
+    .filter(d => d.daysOver > 0 && !/closed|cancelled/i.test(d.status))
+    .filter(d => !odMod || d.module === odMod)
+    .filter(d => !odSev || d.sevCat === odSev)
+    .filter(d => {
+      if (!q) return true;
+      return (d.key       || '').toLowerCase().includes(q) ||
+             (d.summary   || '').toLowerCase().includes(q) ||
+             (d.assignee  || '').toLowerCase().includes(q) ||
+             (d.workstream|| '').toLowerCase().includes(q) ||
+             (d.module    || '').toLowerCase().includes(q) ||
+             (d.category  || '').toLowerCase().includes(q) ||
+             (d.status    || '').toLowerCase().includes(q);
+    })
+    .sort((a,b) => tableSort(a, b, _odSortField, _odSortDir));
+
+  // Update search result count label
+  const countEl = document.getElementById('odSearchCount');
+  if (countEl) {
+    if (q) {
+      countEl.textContent = `${overdue.length} result${overdue.length!==1?'s':''}`;
+      countEl.style.color = overdue.length === 0 ? 'var(--red)' : 'var(--muted)';
+    } else {
+      countEl.textContent = '';
+    }
+  }
+
+  updateSortHeaders('overdueTable', _odSortField, _odSortDir);
+  document.getElementById('overdueCountBadge').textContent = overdue.length;
+  const start = (odPage-1)*PAGE;
+  const rows = overdue.slice(start, start+PAGE);
+  const tbody = document.getElementById('overdueTbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-cell">No overdue issues</td></tr>';
+    document.getElementById('overduePg').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = rows.map(d => {
+    const kurl = issueUrl(d.key);
+    const sevCls = 'sev-'+d.sevCat.toLowerCase();
+    const attn = `<span class="sla-attn" title="SLA Breach! ${d.daysOver}d overdue">!</span>`;
+    const catCell = d.category ? `<span class="cat-badge">${esc(d.category)}</span>` : '<span style="color:var(--muted)">—</span>';
+    const hasHist = !!(d.history && d.history.trim());
+    const k1 = d.key.replace(/'/g,"\\'");
+    const actionCell = `<div class="action-cell">
+      <button class="btn-notify" onclick="openNotifyModal('${k1}')">🔔 Notify</button>
+      <button class="btn-comment${hasHist?' has-comment':''}" onclick="openCommentModal('${k1}')" title="${hasHist?'View comments':'No comments'}">💬 Comment${hasHist?' ●':''}</button>
+    </div>`;
+    return `<tr>
+      <td><a class="key-link" href="${kurl}" target="_blank" data-hkey="${esc(d.key)}"
+          onmouseenter="showHistTooltipByKey(event,this)"
+          onmouseleave="hideHistTooltip()"
+          onmousemove="moveHistTooltip(event)">${esc(d.key)}</a></td>
+      <td title="${esc(d.summary)}"><span class="sev-badge ${sevCls}">${esc(d.sevCat)}</span> ${esc(d.summary.substring(0,40))}</td>
+      <td><span class="status-chip">${esc(d.status)}</span></td>
+      <td>${esc(d.workstream)}</td>
+      <td>${esc(d.testType)}</td>
+      <td>${catCell}</td>
+      <td>${esc(d.module)}</td>
+      <td>${esc(d.assignee)}</td>
+      <td>${fmtDate(d.created)}</td>
+      <td>${fmtDate(d.due)}</td>
+      <td><div class="sla-breach-cell">${attn}<span class="breach-days">${d.daysOver}d overdue</span></div></td>
+      <td>${actionCell}</td>
+    </tr>`;
+  }).join('');
+
+  renderPg('overduePg', Math.ceil(overdue.length/PAGE), odPage, p=>{odPage=p;renderOverdueTable();});
+}
+
+function sortOverdue(field) {
+  if (_odSortField === field) _odSortDir *= -1; else { _odSortField=field; _odSortDir=1; }
+  odPage = 1;
+  renderOverdueTable();
+}
+
+// ── ISSUE LIST ──
+function renderIssueList() {
+  const issMod = (document.getElementById('issModFilter')||{}).value || '';
+  const issSev = (document.getElementById('issSevFilter')||{}).value || '';
+
+  // Show/hide active status filter badge
+  const badge = document.getElementById('issStatusFilterBadge');
+  const badgeLbl = document.getElementById('issStatusFilterLabel');
+  if (badge && badgeLbl) {
+    badge.style.display = _issStatusFilter ? 'inline-block' : 'none';
+    badgeLbl.textContent = _issStatusFilter;
+  }
+
+  const issQ = _issSearchText.toLowerCase().trim();
+
+  const sorted = [...baseData]
+    .filter(d => !issMod || d.module === issMod)
+    .filter(d => !issSev || d.sevCat === issSev)
+    .filter(d => !_issOverdueOnly  ||  isOverdueActive(d))
+    .filter(d => !_issExclOverdue  || !isOverdueActive(d))
+    .filter(d => !_issStatusFilter || d.status === _issStatusFilter)
+    .filter(d => {
+      if (!issQ) return true;
+      return (d.key        || '').toLowerCase().includes(issQ) ||
+             (d.summary    || '').toLowerCase().includes(issQ) ||
+             (d.assignee   || '').toLowerCase().includes(issQ) ||
+             (d.workstream || '').toLowerCase().includes(issQ) ||
+             (d.module     || '').toLowerCase().includes(issQ) ||
+             (d.category   || '').toLowerCase().includes(issQ) ||
+             (d.status     || '').toLowerCase().includes(issQ);
+    })
+    .sort((a,b) => tableSort(a, b, _sortField, _sortDir));
+
+  // Update search result count label
+  const issCountEl = document.getElementById('issSearchCount');
+  if (issCountEl) {
+    if (issQ) {
+      issCountEl.textContent = `${sorted.length} result${sorted.length !== 1 ? 's' : ''}`;
+      issCountEl.style.color = sorted.length === 0 ? 'var(--red)' : 'var(--muted)';
+    } else {
+      issCountEl.textContent = '';
+    }
+  }
+
+  updateSortHeaders('issueTable', _sortField, _sortDir);
+  document.getElementById('issueCountBadge').textContent = sorted.length;
+  const start = (issPage-1)*PAGE;
+  const rows = sorted.slice(start, start+PAGE);
+  const tbody = document.getElementById('issueTbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-cell">No issues</td></tr>';
+    document.getElementById('issuePg').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = rows.map(d => {
+    const kurl = issueUrl(d.key);
+    const sevCls = 'sev-'+d.sevCat.toLowerCase();
+    const ageLbl = d.ageDays !== null ? d.ageDays+'d' : '—';
+    const breachMark = d.daysOver > 0 ? `<span class="sla-attn" style="width:12px;height:12px;font-size:8px" title="${d.daysOver}d overdue">!</span>` : '';
+    const catCell = d.category ? `<span class="cat-badge">${esc(d.category)}</span>` : '<span style="color:var(--muted)">—</span>';
+    const hasHist2 = !!(d.history && d.history.trim());
+    const k2 = d.key.replace(/'/g,"\\'");
+    const actionCell2 = `<div class="action-cell">
+      <button class="btn-notify" onclick="openNotifyModal('${k2}')">🔔 Notify</button>
+      <button class="btn-comment${hasHist2?' has-comment':''}" onclick="openCommentModal('${k2}')" title="${hasHist2?'View comments':'No comments'}">💬 Comment${hasHist2?' ●':''}</button>
+    </div>`;
+    return `<tr>
+      <td><a class="key-link" href="${kurl}" target="_blank" data-hkey="${esc(d.key)}"
+          onmouseenter="showHistTooltipByKey(event,this)"
+          onmouseleave="hideHistTooltip()"
+          onmousemove="moveHistTooltip(event)">${esc(d.key)}</a></td>
+      <td title="${esc(d.summary)}">${esc(d.summary.substring(0,50))}</td>
+      <td><span class="status-chip">${esc(d.status)}</span></td>
+      <td><span class="sev-badge ${sevCls}">${esc(d.severity)||d.sevCat}</span></td>
+      <td>${esc(d.module)}</td>
+      <td>${esc(d.workstream)}</td>
+      <td>${catCell}</td>
+      <td>${esc(d.assignee)}</td>
+      <td>${fmtDate(d.created)}</td>
+      <td>${fmtDate(d.due)}</td>
+      <td>${breachMark} ${ageLbl}</td>
+      <td>${actionCell2}</td>
+    </tr>`;
+  }).join('');
+
+  renderPg('issuePg', Math.ceil(sorted.length/PAGE), issPage, p=>{issPage=p;renderIssueList();});
+}
+
+function sortBy(field) {
+  if (_sortField === field) _sortDir *= -1; else { _sortField=field; _sortDir=1; }
+  issPage = 1;
+  renderIssueList();
+}
+
+// ══════════════════════════════════════════════════════════
+//  STATUS SUMMARY — ISSUE COUNT BY STATUS (EXCL OVERDUE)
+// ══════════════════════════════════════════════════════════
+
+// "Overdue active" = not closed/cancelled AND daysOver > 0
+function isOverdueActive(d) {
+  return d.daysOver > 0 && !/closed|cancelled/i.test(d.status);
+}
+
+function renderStatusSummary() {
+  const grid   = document.getElementById('statusSumGrid');
+  const note   = document.getElementById('statusSumNote');
+  const header = document.getElementById('statusSumHeader');
+  if (!grid) return;
+
+  if (!baseData.length) {
+    grid.innerHTML = '<span style="font-size:10px;color:var(--muted)">No data loaded</span>';
+    if (note)   note.textContent = '';
+    if (header) header.style.display = 'none';
+    return;
+  }
+
+  // ── Per-status: total count + overdue count ──
+  const totalByStatus   = {};   // all issues
+  const overdueByStatus = {};   // overdue active only
+
+  baseData.forEach(d => {
+    const s = d.status || '(no status)';
+    totalByStatus[s]   = (totalByStatus[s]   || 0) + 1;
+    if (isOverdueActive(d)) {
+      overdueByStatus[s] = (overdueByStatus[s] || 0) + 1;
+    }
+  });
+
+  // ── Overall totals ──
+  const grandTotal   = baseData.length;
+  const totalOverdue = baseData.filter(isOverdueActive).length;
+  const totalOk      = grandTotal - totalOverdue;
+  const pct          = grandTotal > 0 ? Math.round(totalOverdue / grandTotal * 100) : 0;
+
+  // ── Render overall summary strip ──
+  if (header) {
+    header.style.display = 'flex';
+    document.getElementById('sshTotal').textContent   = grandTotal;
+    document.getElementById('sshOverdue').textContent = totalOverdue;
+    document.getElementById('sshOntrack').textContent = totalOk;
+    document.getElementById('sshPctLbl').textContent  = `${pct}% overdue`;
+    document.getElementById('sshBarFill').style.width = `${pct}%`;
+    document.getElementById('sshPctSub').textContent  =
+      `${totalOverdue} of ${grandTotal} issues past due date`;
+  }
+
+  // ── Sort statuses: most total first ──
+  const sorted = Object.entries(totalByStatus).sort((a, b) => b[1] - a[1]);
+
+  if (!sorted.length) {
+    grid.innerHTML = '<span style="font-size:10px;color:var(--muted)">No issues</span>';
+    if (note) note.textContent = '';
+    return;
+  }
+
+  grid.innerHTML = sorted.map(([status, total]) => {
+    const od       = overdueByStatus[status] || 0;
+    const ok       = total - od;
+    const odPct    = total > 0 ? Math.round(od / total * 100) : 0;
+    const isActive = _issStatusFilter === status;
+    const hasOD    = od > 0 ? 'has-overdue' : '';
+
+    const odPill = od > 0
+      ? `<span class="ssc-od-pill">⚠ ${od} overdue</span>`
+      : `<span class="ssc-ok-pill">✓ 0 overdue</span>`;
+
+    const bar = od > 0
+      ? `<div class="ssc-bar-track"><div class="ssc-bar-fill" style="width:${odPct}%"></div></div>`
+      : '';
+
+    const sSafe = status.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="status-sum-card ${hasOD} ${isActive ? 'active' : ''}"
+        onclick="filterByStatus('${sSafe}')"
+        title="${esc(status)}: ${total} total · ${od} overdue (${odPct}%) · Click to filter">
+      <div class="ssc-lbl">${esc(status)}</div>
+      <div class="ssc-top">
+        <div class="ssc-total">${total}</div>
+        <span style="font-size:9px;color:var(--muted);align-self:flex-end;padding-bottom:2px">total</span>
+      </div>
+      <div class="ssc-row">${odPill}
+        <span style="color:var(--muted);font-size:9px">${ok} non-overdue</span>
+      </div>
+      ${bar}
+    </div>`;
+  }).join('');
+
+  if (note) {
+    note.textContent = `${sorted.length} status group${sorted.length !== 1 ? 's' : ''} · ${totalOverdue} overdue issue${totalOverdue !== 1 ? 's' : ''} across all statuses · Click a card to filter the table below`;
+  }
+}
+
+function filterByStatus(status) {
+  _issStatusFilter = (_issStatusFilter === status) ? '' : status;
+  issPage = 1;
+  renderStatusSummary();
+  renderIssueList();
+}
+
+function clearIssStatusFilter() {
+  _issStatusFilter = '';
+  issPage = 1;
+  renderStatusSummary();
+  renderIssueList();
+}
+
+function toggleExclOverdue() {
+  _issExclOverdue = !_issExclOverdue;
+  // mutually exclusive: turn off "Show Overdue Only" if active
+  if (_issExclOverdue && _issOverdueOnly) {
+    _issOverdueOnly = false;
+    _syncOverdueOnlyBtn();
+  }
+  const btn = document.getElementById('exclOverdueBtn');
+  if (btn) {
+    btn.textContent = `🚫 Exclude Overdue: ${_issExclOverdue ? 'ON' : 'OFF'}`;
+    btn.classList.toggle('active', _issExclOverdue);
+  }
+  issPage = 1;
+  renderIssueList();
+}
+
+function toggleOverdueOnly() {
+  _issOverdueOnly = !_issOverdueOnly;
+  // mutually exclusive: turn off "Exclude Overdue" if active
+  if (_issOverdueOnly && _issExclOverdue) {
+    _issExclOverdue = false;
+    const exclBtn = document.getElementById('exclOverdueBtn');
+    if (exclBtn) { exclBtn.textContent = '🚫 Exclude Overdue: OFF'; exclBtn.classList.remove('active'); }
+  }
+  _syncOverdueOnlyBtn();
+  issPage = 1;
+  renderIssueList();
+}
+
+function _syncOverdueOnlyBtn() {
+  const btn = document.getElementById('showOverdueOnlyBtn');
+  if (!btn) return;
+  btn.textContent = `⚠ Show Overdue Only: ${_issOverdueOnly ? 'ON' : 'OFF'}`;
+  btn.classList.toggle('active', _issOverdueOnly);
+}
+
+// ── PAGINATION ──
+function renderPg(id, total, cur, cb) {
+  const el = document.getElementById(id);
+  if (total <= 1) { el.innerHTML=''; return; }
+  el.innerHTML = Array.from({length:total},(_,i)=>`<button class="pg-btn ${i+1===cur?'active':''}" onclick="(${cb})(${i+1})">${i+1}</button>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════════════════
+
+// ── Save As Dropdown ──
+function toggleSaveAsMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('saveAsMenu');
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  // Close any open menu first
+  closeSaveAsMenu();
+  if (isHidden) {
+    menu.classList.remove('hidden');
+    // Close when clicking outside
+    setTimeout(() => document.addEventListener('click', closeSaveAsMenu, {once:true}), 0);
+  }
+}
+function closeSaveAsMenu() {
+  const menu = document.getElementById('saveAsMenu');
+  if (menu) menu.classList.add('hidden');
+}
+
+// ── Preview Modal ──
+function openPreview() {
+  if (!baseData.length) { toast('No data to preview'); return; }
+  const headers = ['Key','Summary','Status','Severity','Workstream','Test Type','Issue Category','Module','Assignee','Created','Due Date','Age WD','Days Overdue'];
+  const rows = baseData.map(d => [
+    d.key, d.summary.substring(0,60), d.status, d.severity||d.sevCat,
+    d.workstream, d.testType, d.category, d.module, d.assignee,
+    fmtDate(d.created), fmtDate(d.due), d.ageDays??'', d.daysOver||0
+  ]);
+
+  const tbl = document.createElement('table');
+  tbl.style.cssText='width:100%;border-collapse:collapse;font-size:11px;';
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr>'+headers.map(h=>`<th style="padding:6px 8px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:9px;font-weight:700;text-transform:uppercase;text-align:left;color:#64748b;white-space:nowrap">${esc(h)}</th>`).join('')+'</tr>';
+  tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  rows.forEach((r,ri) => {
+    const tr = document.createElement('tr');
+    tr.style.background = ri%2===0 ? '#fff' : '#f8fafc';
+    tr.innerHTML = r.map((v,ci)=>{
+      const isOverdue = ci===12 && +v>0;
+      return `<td style="padding:5px 8px;border:1px solid #e2e8f0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isOverdue?'color:#dc2626;font-weight:700':''}">${esc(String(v))}</td>`;
+    }).join('');
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+
+  const wrap = document.getElementById('previewTableWrap');
+  if (wrap) { wrap.innerHTML=''; wrap.appendChild(tbl); }
+
+  const subtitle = document.getElementById('previewSubtitle');
+  if (subtitle) subtitle.textContent = `${baseData.length} issues · filters applied`;
+
+  const meta = document.getElementById('previewMeta');
+  if (meta) meta.textContent = `Generated: ${new Date().toLocaleDateString('en-GB')} · ${baseData.length} rows`;
+
+  document.getElementById('previewOverlay').classList.remove('hidden');
+}
+
+function closePreview() {
+  document.getElementById('previewOverlay').classList.add('hidden');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('previewOverlay')) closePreview();
+}
+
+// ── CSV Export ──
+function exportCSV() {
+  if (!baseData.length) { toast('No data to export'); return; }
+  const headers = ['Key','Summary','Status','Severity','Sev Cat','Workstream','Test Type','Issue Category','Module','Assignee','Created','Due Date','Age WD','Days Overdue'];
+  const rows = baseData.map(d=>[
+    d.key, d.summary, d.status, d.severity, d.sevCat, d.workstream,
+    d.testType, d.category, d.module, d.assignee, fmtDate(d.created), fmtDate(d.due),
+    d.ageDays??'', d.daysOver||0
+  ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const blob = new Blob([headers.join(',')+'\n'+rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='uat_sla_report.csv'; a.click();
+  toast('📊 CSV exported');
+}
+
+// ── Excel Export ──
+function exportXLSX() {
+  if (!baseData.length) { toast('No data to export'); return; }
+  try {
+    const headers = ['Key','Summary','Status','Severity','Sev Cat','Workstream','Test Type','Issue Category','Module','Assignee','Created','Due Date','Age WD','Days Overdue'];
+    const wsData = [headers, ...baseData.map(d=>[
+      d.key, d.summary, d.status, d.severity, d.sevCat, d.workstream,
+      d.testType, d.category, d.module, d.assignee,
+      fmtDate(d.created), fmtDate(d.due), d.ageDays??'', d.daysOver||0
+    ])];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // Column widths
+    ws['!cols'] = [10,40,14,10,8,16,14,20,16,18,12,12,8,10].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, 'UAT Issues');
+    XLSX.writeFile(wb, 'uat_sla_report.xlsx');
+    toast('🟢 Excel exported');
+  } catch(e) { toast('❌ Excel error: '+e.message); }
+}
+
+// ── PDF Export ──
+async function exportPDF() {
+  if (!baseData.length) { toast('No data to export'); return; }
+  // Find whatever PDF button triggered this and disable it
+  const btns = document.querySelectorAll('.btn-export.pdf, #pdfBtnPrev');
+  btns.forEach(b=>{ b.disabled=true; b.dataset.origText=b.textContent; b.textContent='⏳ Generating…'; });
+  try {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const M=10, W=doc.internal.pageSize.width, IW=W-2*M;
+    let y=M;
+
+    const addSection = async(id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const prev = el.style.cssText;
+      el.style.cssText='display:block!important;position:fixed!important;top:0!important;left:-9999px!important;width:1200px!important;visibility:visible!important;z-index:-1!important;';
+      await new Promise(r=>setTimeout(r,80));
+      const canvas = await html2canvas(el,{scale:1.8,useCORS:true,logging:false});
+      el.style.cssText=prev;
+      const imgH = canvas.height/canvas.width*IW;
+      if (y+imgH > doc.internal.pageSize.height-M) { doc.addPage(); y=M; }
+      doc.addImage(canvas.toDataURL('image/jpeg',0.85),'JPEG',M,y,IW,imgH);
+      y+=imgH+4;
+    };
+
+    doc.setFontSize(14); doc.setFont(undefined,'bold');
+    doc.text('UAT Issue Monitor — SLA Report', M, y); y+=7;
+    doc.setFontSize(8); doc.setFont(undefined,'normal'); doc.setTextColor(100);
+    doc.text('Generated: '+new Date().toLocaleDateString('en-GB'), M, y); y+=8;
+    doc.setTextColor(0);
+
+    await addSection('slaBaselineCard');
+    await addSection('slaBreachCard');
+
+    doc.save('uat_sla_report.pdf');
+    toast('📄 PDF exported');
+  } catch(e) { toast('❌ PDF error: '+e.message); }
+  finally {
+    btns.forEach(b=>{ b.disabled=false; b.textContent=b.dataset.origText||'📄 PDF'; });
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const pane = document.getElementById('tab-'+tab);
+  const btn = document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`);
+  if (pane) pane.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function toggleDark() {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('uat_dark', document.documentElement.classList.contains('dark'));
+}
+
+function toggleCardBody(bodyId, arrowId) {
+  const body = document.getElementById(bodyId);
+  const arrow = document.getElementById(arrowId);
+  if (!body) return;
+  const isCollapsed = body.classList.toggle('collapsed');
+  if (arrow) arrow.textContent = isCollapsed ? '▼' : '▲';
+  // Persist state
+  try { localStorage.setItem('card_collapsed_'+bodyId, isCollapsed); } catch(e){}
+}
+
+// Restore collapsed state on load
+function restoreCardStates() {
+  ['dataBody','imfBody'].forEach(id => {
+    try {
+      if (localStorage.getItem('card_collapsed_'+id) === 'true') {
+        const body = document.getElementById(id);
+        const arrowId = id === 'dataBody' ? 'dataArrow' : 'imfArrow';
+        const arrow = document.getElementById(arrowId);
+        if (body) body.classList.add('collapsed');
+        if (arrow) arrow.textContent = '▼';
+      }
+    } catch(e) {}
+  });
+}
+
+function clearData() {
+  rawRows=[]; csvHeaders=[]; allData=[]; baseData=[];
+  colMap={};
+  _issExclOverdue = false; _issOverdueOnly = false; _issStatusFilter = '';
+  const exclBtn = document.getElementById('exclOverdueBtn');
+  if (exclBtn) { exclBtn.textContent = '🚫 Exclude Overdue: OFF'; exclBtn.classList.remove('active'); }
+  const odOnlyBtn = document.getElementById('showOverdueOnlyBtn');
+  if (odOnlyBtn) { odOnlyBtn.textContent = '⚠ Show Overdue Only: OFF'; odOnlyBtn.classList.remove('active'); }
+  const badge = document.getElementById('issStatusFilterBadge');
+  if (badge) badge.style.display = 'none';
+  const sumGrid = document.getElementById('statusSumGrid');
+  if (sumGrid) sumGrid.innerHTML = '<span style="font-size:10px;color:var(--muted)">No data loaded</span>';
+  const sumNote = document.getElementById('statusSumNote');
+  if (sumNote) sumNote.textContent = '';
+  document.getElementById('fileInfoBar').classList.add('hidden');
+  document.getElementById('colMapPanel').classList.add('hidden');
+  document.getElementById('uploadZone').classList.remove('hidden');
+  document.getElementById('fileInput').value='';
+  _colMapOpen=false;
+  FILT.status.clear(); FILT.ws=''; FILT.testType.clear(); FILT.sev.clear(); FILT.sevCat=''; FILT.cat.clear();
+  renderSLABaseline();
+  document.getElementById('imfShown').textContent='0';
+  document.getElementById('imfTotal').textContent='0';
+  document.getElementById('statusChips').innerHTML='';
+  document.getElementById('testTypeChips').innerHTML='';
+  document.getElementById('severityChips').innerHTML='';
+  document.getElementById('wsFilter').innerHTML='<option value="">— All Workstreams —</option>';
+  ['bOverdue','bOntrack','bNoDate','outMeet','outLost'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent='0';
+  });
+  ['overdueCountBadge','issueCountBadge'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent='0';
+  });
+  document.getElementById('overdueTbody').innerHTML='<tr><td colspan="12" class="empty-cell">No data loaded</td></tr>';
+  document.getElementById('issueTbody').innerHTML='<tr><td colspan="12" class="empty-cell">No data loaded</td></tr>';
+  document.getElementById('wsBkGrid').innerHTML='<span style="font-size:10px;color:var(--muted)">—</span>';
+  document.getElementById('overviewEmpty').classList.remove('hidden');
+  document.getElementById('overviewContent').classList.add('hidden');
+  if (_charts['proc']) { _charts['proc'].destroy(); delete _charts['proc']; }
+  toast('Data cleared');
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════════════
+//  COMMENT MODAL
+// ══════════════════════════════════════════════════════════
+
+function openCommentModal(key) {
+  const d = allData.find(r => r.key === key);
+  if (!d) { toast('Issue not found'); return; }
+
+  // Header
+  document.getElementById('cmKey').textContent     = key;
+  document.getElementById('cmStatus').textContent  = d.status || '—';
+  document.getElementById('cmSummary').textContent = d.summary || '—';
+
+  // Meta strip
+  const meta = [
+    { label:'Severity',   value: d.severity || d.sevCat || '—' },
+    { label:'Module',     value: d.module    || '—' },
+    { label:'Workstream', value: d.workstream|| '—' },
+    { label:'Assignee',   value: d.assignee  || '—' },
+    { label:'Created',    value: fmtDate(d.created) || '—' },
+    { label:'Due Date',   value: fmtDate(d.due)     || '—' },
+    ...(d.daysOver > 0 ? [{ label:'SLA Breach', value: d.daysOver+'d overdue', red:true }] : []),
+  ];
+  document.getElementById('cmMetaStrip').innerHTML = meta.map(m =>
+    `<div class="cm-meta-item">
+      <div class="cm-meta-label">${esc(m.label)}</div>
+      <div class="cm-meta-value" style="${m.red?'color:var(--s1);':''}">${esc(m.value)}</div>
+    </div>`
+  ).join('');
+
+  // Comment body — split on common delimiters to show as separate entries
+  const raw = (d.history || '').trim();
+  const bodyEl = document.getElementById('cmBody');
+  if (!raw) {
+    bodyEl.innerHTML = `<div class="comment-empty">
+      <div style="font-size:24px;margin-bottom:8px">💬</div>
+      <div>No comments / history found for this issue.</div>
+      <div style="font-size:10px;margin-top:6px;color:var(--muted)">Map the "History / Comments" column in the Column Mapping panel to see comments here.</div>
+    </div>`;
+  } else {
+    // Try to split into individual comment entries
+    // Split on common separators: numbered list (1., 2.), double newline, "---", timestamps
+    const entries = splitComments(raw);
+    bodyEl.innerHTML = `<div class="comment-block">
+      <div class="comment-block-hdr">
+        <span class="comment-block-icon">💬</span>
+        <span class="comment-block-title">Comments / History</span>
+        <span class="comment-block-count">${entries.length}</span>
+      </div>
+      ${entries.map((entry, i) =>
+        `<div class="comment-entry">
+          <div class="comment-entry-num">#${i+1}</div>
+          <div class="comment-entry-text">${escHtml(entry)}</div>
+        </div>`
+      ).join('')}
+    </div>`;
+  }
+
+  document.getElementById('commentOverlay').classList.remove('hidden');
+}
+
+function splitComments(raw) {
+  // Try splitting by double-newline paragraphs first
+  const byParagraph = raw.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+  if (byParagraph.length > 1) return byParagraph;
+  // Try splitting by common Jira comment separators: "---", "***", "===", timestamp-like patterns
+  const bySep = raw.split(/\n[-=*]{3,}\n|\n(?=\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})|(?=\[\d{2}[\/\-])/).map(s=>s.trim()).filter(Boolean);
+  if (bySep.length > 1) return bySep;
+  // No clear separator — return as single entry
+  return [raw];
+}
+
+function escHtml(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\n/g,'<br>');
+}
+
+function closeCommentModal() {
+  document.getElementById('commentOverlay').classList.add('hidden');
+}
+
+function handleCommentOverlayClick(e) {
+  if (e.target === document.getElementById('commentOverlay')) closeCommentModal();
+}
+
+// ══════════════════════════════════════════════════════════
+//  HISTORY TOOLTIP
+// ══════════════════════════════════════════════════════════
+
+// Lookup-based tooltip — safe: no inline serialisation of arbitrary text
+function showHistTooltipByKey(e, el) {
+  const key = el.dataset.hkey || '';
+  const d = allData.find(r => r.key === key);
+  showHistTooltip(e, d ? (d.history || '') : '');
+}
+
+function showHistTooltip(e, histText) {
+  const tip = document.getElementById('histTooltip');
+  const body = document.getElementById('histTooltipBody');
+  if (!tip || !body) return;
+  const text = (histText || '').trim();
+  body.innerHTML = text
+    ? text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\n/g,'<br>').replace(/\t/g,'&nbsp;&nbsp;')
+    : '<span class="ht-empty">No history / comments available for this issue.</span>';
+  tip.classList.add('show');
+  positionHistTooltip(e);
+}
+
+function hideHistTooltip() {
+  const tip = document.getElementById('histTooltip');
+  if (tip) tip.classList.remove('show');
+}
+
+function moveHistTooltip(e) {
+  positionHistTooltip(e);
+}
+
+function positionHistTooltip(e) {
+  const tip = document.getElementById('histTooltip');
+  if (!tip || !tip.classList.contains('show')) return;
+  const GAP = 14;
+  const TW = tip.offsetWidth  || 320;
+  const TH = tip.offsetHeight || 160;
+  const VW = window.innerWidth;
+  const VH = window.innerHeight;
+  let x = e.clientX + GAP;
+  let y = e.clientY + GAP;
+  if (x + TW > VW - 8) x = e.clientX - TW - GAP;
+  if (y + TH > VH - 8) y = e.clientY - TH - GAP;
+  tip.style.left = Math.max(8, x) + 'px';
+  tip.style.top  = Math.max(8, y) + 'px';
+}
+
+// ══════════════════════════════════════════════════════════
+//  NOTIFY MODAL
+// ══════════════════════════════════════════════════════════
+
+let _notifyKey = '';
+let _notifyTab = 'email';  // 'email' | 'teams'
+const TEAMS_EMAIL_KEY = 'uat_teams_channel_email';
+
+function openNotifyModal(key) {
+  const d = allData.find(r => r.key === key);
+  if (!d) { toast('Issue not found'); return; }
+  _notifyKey = key;
+
+  // Populate issue meta bar
+  document.getElementById('notifyIssueKey').textContent = key;
+  const sevLabel = d.sevCat !== 'none' ? d.sevCat : '';
+  const overdueTxt = d.daysOver > 0 ? ` · ⚠ ${d.daysOver}d overdue` : '';
+  document.getElementById('notifyIssueMeta').textContent =
+    `${sevLabel ? sevLabel+' · ' : ''}${d.status}${d.assignee ? ' · '+d.assignee : ''}${overdueTxt}`;
+
+  // Pre-fill subject
+  const subjectEl = document.getElementById('notifySubject');
+  subjectEl.value = `[Action Required] ${key} — ${d.summary.substring(0,60)}${d.summary.length>60?'…':''}`;
+
+  // Pre-fill body
+  const dueStr  = d.due  ? fmtDate(d.due)  : 'Not set';
+  const crStr   = d.created ? fmtDate(d.created) : 'Not set';
+  const slaLine = d.daysOver > 0
+    ? `⚠ SLA Breach: ${d.daysOver} working day(s) overdue`
+    : d.due ? '✅ On-track' : '— No due date set';
+  const hist = (d.history||'').trim();
+  document.getElementById('notifyBody').value =
+`Hi${d.assignee ? ' '+d.assignee : ''},
+
+Please be informed that the following UAT issue requires your attention to resolve:
+
+────────────────────────────────
+Issue Key : ${key}
+Summary   : ${d.summary}
+Status    : ${d.status}
+Severity  : ${d.severity || d.sevCat}
+Module    : ${d.module || '—'}
+Workstream: ${d.workstream || '—'}
+Assignee  : ${d.assignee || '—'}
+Created   : ${crStr}
+Due Date  : ${dueStr}
+SLA Status: ${slaLine}
+────────────────────────────────
+${hist ? '\nHistory / Comments:\n'+hist+'\n' : ''}
+Please take action to resolve this issue at the earliest opportunity.
+
+Thank you.
+`;
+
+  // Pre-fill To with assignee email (best-effort: if assignee looks like an email)
+  const toEl = document.getElementById('notifyToEmail');
+  const asg = d.assignee || '';
+  toEl.value = asg.includes('@') ? asg : '';
+
+  // Restore saved Teams channel email
+  const teamsEl = document.getElementById('notifyTeamsEmail');
+  teamsEl.value = localStorage.getItem(TEAMS_EMAIL_KEY) || '';
+
+  // Reset tab
+  switchNotifyTab('email');
+
+  document.getElementById('notifyOverlay').classList.remove('hidden');
+}
+
+function closeNotifyModal() {
+  document.getElementById('notifyOverlay').classList.add('hidden');
+  _notifyKey = '';
+}
+
+function handleNotifyOverlayClick(e) {
+  if (e.target === document.getElementById('notifyOverlay')) closeNotifyModal();
+}
+
+function switchNotifyTab(tab) {
+  _notifyTab = tab;
+  document.getElementById('notifyEmailSection').style.display = tab === 'email' ? '' : 'none';
+  document.getElementById('notifyTeamsSection').style.display = tab === 'teams' ? '' : 'none';
+  document.getElementById('ntabEmail').classList.toggle('active', tab === 'email');
+  document.getElementById('ntabTeams').classList.toggle('active', tab === 'teams');
+  const btn = document.getElementById('notifySendBtn');
+  if (tab === 'email') {
+    btn.textContent = '✉ Send Email';
+    btn.className = 'btn-notify-send btn-notify-email';
+  } else {
+    btn.textContent = '💬 Send to Teams';
+    btn.className = 'btn-notify-send btn-notify-teams';
+  }
+}
+
+function sendNotification() {
+  const subjectRaw = document.getElementById('notifySubject').value || '';
+  const bodyRaw    = document.getElementById('notifyBody').value || '';
+
+  let toAddr = '';
+  if (_notifyTab === 'email') {
+    toAddr = (document.getElementById('notifyToEmail').value || '').trim();
+    if (!toAddr) { toast('⚠ Please enter a recipient email address'); return; }
+  } else {
+    toAddr = (document.getElementById('notifyTeamsEmail').value || '').trim();
+    if (!toAddr) { toast('⚠ Please enter the Teams channel email address'); return; }
+    try { localStorage.setItem(TEAMS_EMAIL_KEY, toAddr); } catch(e) {}
+  }
+
+  const label = _notifyTab === 'teams' ? 'Teams channel' : 'recipient';
+
+  // ── Build mailto: with body embedded (up to 1500 chars to stay within OS limits) ──
+  // Most mail clients support ~2000 chars total in a mailto URL; encoding adds ~3× overhead
+  // so we cap the raw body at 1500 chars and truncate with a note if needed.
+  const MAX_BODY = 1500;
+  let shortBody = bodyRaw;
+  if (bodyRaw.length > MAX_BODY) {
+    shortBody = bodyRaw.substring(0, MAX_BODY) + '\n\n[... message truncated — see clipboard for full text ...]';
+  }
+
+  const mailtoLink = `mailto:${encodeURIComponent(toAddr)}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(shortBody)}`;
+
+  // ── Also copy full body to clipboard as backup ──
+  const openOutlook = (clipSuccess) => {
+    const a = document.createElement('a');
+    a.href = mailtoLink;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { try { document.body.removeChild(a); } catch(e){} }, 300);
+
+    if (bodyRaw.length > MAX_BODY) {
+      toast(clipSuccess
+        ? `✉ Outlook opening for ${label} — full message copied to clipboard (body was trimmed in Outlook)`
+        : `✉ Outlook opening for ${label} — body was trimmed; copy manually from the preview above`);
+    } else {
+      toast(`✉ Outlook opening for ${label}`);
+    }
+    closeNotifyModal();
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(bodyRaw).then(() => openOutlook(true)).catch(() => {
+      _fallbackCopy(bodyRaw);
+      openOutlook(false);
+    });
+  } else {
+    _fallbackCopy(bodyRaw);
+    openOutlook(false);
+  }
+}
+
+// ── ISSUE LIST SEARCH HANDLERS ──
+function issSearchChanged(value) {
+  _issSearchText = value;
+  const clearBtn = document.getElementById('issSearchClear');
+  if (clearBtn) clearBtn.classList.toggle('show', value.length > 0);
+  issPage = 1;
+  renderIssueList();
+}
+
+function clearIssSearch() {
+  _issSearchText = '';
+  const inp = document.getElementById('issSearchInput');
+  if (inp) inp.value = '';
+  const clearBtn = document.getElementById('issSearchClear');
+  if (clearBtn) clearBtn.classList.remove('show');
+  const countEl = document.getElementById('issSearchCount');
+  if (countEl) countEl.textContent = '';
+  issPage = 1;
+  renderIssueList();
+}
+
+function resetIssFilters() {
+  const modEl = document.getElementById('issModFilter');
+  const sevEl = document.getElementById('issSevFilter');
+  if (modEl) modEl.value = '';
+  if (sevEl) sevEl.value = '';
+  clearIssSearch();
+  // re-render is handled by clearIssSearch()
+}
+
+// ── OVERDUE SEARCH HANDLERS ──
+function odSearchChanged(value) {
+  _odSearchText = value;
+  const clearBtn = document.getElementById('odSearchClear');
+  if (clearBtn) clearBtn.classList.toggle('show', value.length > 0);
+  odPage = 1;
+  renderOverdueTable();
+}
+
+function clearOdSearch() {
+  _odSearchText = '';
+  const inp = document.getElementById('odSearchInput');
+  if (inp) inp.value = '';
+  const clearBtn = document.getElementById('odSearchClear');
+  if (clearBtn) clearBtn.classList.remove('show');
+  const countEl = document.getElementById('odSearchCount');
+  if (countEl) countEl.textContent = '';
+  odPage = 1;
+  renderOverdueTable();
+}
+
+function resetOdFilters() {
+  const modEl = document.getElementById('odModFilter');
+  const sevEl = document.getElementById('odSevFilter');
+  if (modEl) modEl.value = '';
+  if (sevEl) sevEl.value = '';
+  clearOdSearch();
+  renderOverview();
+}
+
+function _fallbackCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('uat_dark') === 'true') {
+    document.documentElement.classList.add('dark');
+  }
+  // Sync Jira URL input to stored/default value
+  const jiraInput = document.getElementById('jiraUrlInput');
+  if (jiraInput) jiraInput.value = JIRA_BASE;
+  renderSLABaseline();
+  restoreCardStates();
+});
+</script>
+</body>
+</html>

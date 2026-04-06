@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SMILE UAT Collaboration Portal</title>
+<style>
+/* ===== PORTAL STYLES ===== */
+
+:root{
+  --e1:#0A5ED9;--e2:#0078D4;--e3:#00B4E8;
+  --ac:#0078D4;--ac-lt:#EBF4FB;--ac-dk:#005FA3;
+  --in:#4F46E5;--in-lt:#EEF2FF;
+  --bg:#F5F7FA;--sf:#FFF;--bd:#E2E6EC;--bd2:#CDD3DB;
+  --tx:#0F1B2D;--tx2:#2D3D52;--mu:#5E7088;--mu2:#98A8BB;
+  --sbw:230px;--hdh:54px;--r:10px;
+  --sh:0 4px 20px rgba(0,0,0,.09);--ease:.22s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);color:var(--tx);display:flex;flex-direction:column;
+  font-size:14px;line-height:1.5}
+/* Header */
+#P_hdr{height:var(--hdh);flex-shrink:0;z-index:9900;
+  background:linear-gradient(100deg,var(--e1) 0%,var(--e2) 55%,var(--e3) 100%);
+  display:flex;align-items:center;padding:0 14px;gap:10px;
+  box-shadow:0 2px 10px rgba(0,120,212,.3);}
+.P_bg{width:34px;height:34px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.15);border-radius:8px;color:#fff;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:background var(--ease);}
+.P_bg:hover{background:rgba(255,255,255,.28)}
+.P_bg svg{width:18px;height:18px;stroke:#fff;stroke-width:2;stroke-linecap:round;fill:none}
+.P_lg{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.P_lgm{width:32px;height:32px;background:#fff;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;}
+.P_lgm svg{width:18px;height:18px}
+.P_lgt{color:#fff;font-weight:700;font-size:.93rem}
+.P_lgs{color:rgba(255,255,255,.7);font-size:.67rem;margin-top:1px}
+.P_hr{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.P_rp{display:flex;background:rgba(255,255,255,.15);border-radius:20px;padding:3px;gap:2px}
+.P_rb{border:none;background:transparent;color:rgba(255,255,255,.78);
+  font-size:.69rem;font-weight:600;padding:4px 12px;border-radius:16px;
+  cursor:pointer;transition:all var(--ease);white-space:nowrap;}
+.P_rb.on{background:#fff;color:var(--ac)}
+.P_ck{color:rgba(255,255,255,.82);font-size:.72rem;font-weight:500;
+  background:rgba(255,255,255,.12);padding:5px 11px;border-radius:7px;
+  font-variant-numeric:tabular-nums;}
+/* Layout */
+#P_lay{display:flex;flex:1;overflow:hidden}
+/* Sidebar */
+#P_sb{width:var(--sbw);background:var(--sf);border-right:1px solid var(--bd);
+  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
+  transition:width var(--ease),opacity var(--ease);z-index:100;}
+#P_sb.hidden{width:0;opacity:0;pointer-events:none}
+.P_sbt{padding:14px 14px 6px;font-size:.63rem;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;color:var(--mu2);}
+.P_sbs{padding:4px 10px}
+.P_sbd{height:1px;background:var(--bd);margin:6px 14px}
+.P_sbst{font-size:.61rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  color:var(--mu2);padding:6px 10px 3px;}
+.P_nv{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;
+  cursor:pointer;color:var(--mu);transition:background var(--ease),color var(--ease);
+  margin-bottom:2px;white-space:nowrap;overflow:hidden;user-select:none;}
+.P_nv:hover{background:var(--bg);color:var(--tx)}
+.P_nv.on{background:var(--ac-lt);color:var(--ac)}
+.P_nv.on .P_ni{background:rgba(0,120,212,.14);color:var(--ac)}
+.P_ni{width:32px;height:32px;flex-shrink:0;border-radius:8px;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--ease);color:var(--mu);}
+.P_ni svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;fill:none}
+.P_nl{font-size:.83rem;font-weight:500;white-space:nowrap;flex:1}
+.P_nb{font-size:.58rem;font-weight:800;background:var(--ac);color:#fff;
+  padding:2px 7px;border-radius:10px;flex-shrink:0;}
+/* Main area */
+#P_mn{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+/* Page panels */
+.P_pg{display:none;flex:1;overflow-y:auto;padding:22px;flex-direction:column;gap:18px}
+.P_pg.on{display:flex}
+.P_mw{display:none;flex:1;flex-direction:column;overflow:hidden}
+.P_mw.on{display:flex}
+/* Hero banner */
+.P_hro{background:linear-gradient(120deg,var(--e1) 0%,var(--e2) 60%,var(--e3) 100%);
+  border-radius:var(--r);padding:26px 30px;color:#fff;
+  position:relative;overflow:hidden;flex-shrink:0;}
+.P_hro::after{content:'';position:absolute;right:-50px;bottom:-50px;
+  width:200px;height:200px;border-radius:50%;
+  background:rgba(255,255,255,.07);pointer-events:none;}
+.P_hro h1{font-size:1.35rem;font-weight:800;margin-bottom:7px;line-height:1.25}
+.P_hro p{font-size:.81rem;opacity:.87;max-width:460px;line-height:1.7}
+.P_hro_eye{font-size:.67rem;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;opacity:.7;margin-bottom:5px}
+.P_hro_chips{margin-top:14px;display:flex;gap:7px;flex-wrap:wrap}
+.P_hch{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);
+  border-radius:14px;padding:4px 12px;font-size:.69rem;font-weight:600;
+  display:flex;align-items:center;gap:5px;}
+.P_hch svg{width:12px;height:12px;stroke:#fff;stroke-width:2;stroke-linecap:round;fill:none}
+/* Module cards */
+.P_cgr{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.P_card{background:var(--sf);border:1.5px solid var(--bd);border-radius:var(--r);
+  padding:20px;display:flex;flex-direction:column;
+  transition:box-shadow var(--ease),border-color var(--ease),transform .15s;}
+.P_card:hover{box-shadow:var(--sh);border-color:var(--bd2);transform:translateY(-1px)}
+.P_chd{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.P_cic{width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;}
+.P_cic svg{width:20px;height:20px;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.P_cic.blu{background:var(--ac-lt)}.P_cic.blu svg{stroke:var(--ac)}
+.P_cic.ind{background:var(--in-lt)}.P_cic.ind svg{stroke:var(--in)}
+.P_ct{font-size:.9rem;font-weight:700;margin-bottom:3px;color:var(--tx)}
+.P_cs{font-size:.62rem;font-weight:700;background:var(--bg);color:var(--mu);
+  border:1px solid var(--bd);padding:2px 8px;border-radius:8px;display:inline-block}
+.P_cd{font-size:.79rem;color:var(--mu);line-height:1.65;margin-bottom:12px;flex:1}
+.P_tgs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
+.P_tg{font-size:.66rem;font-weight:600;padding:3px 9px;border-radius:10px;
+  background:var(--bg);color:var(--mu);border:1px solid var(--bd);
+  display:flex;align-items:center;gap:4px;}
+.P_tg svg{width:11px;height:11px;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;fill:none}
+.P_ca{display:flex;gap:8px}
+.P_bl{flex:1;padding:9px;border:none;border-radius:7px;font-weight:700;
+  font-size:.79rem;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;gap:6px;transition:opacity var(--ease),transform .1s;}
+.P_bl svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.2;
+  stroke-linecap:round;stroke-linejoin:round;fill:none}
+.P_bl:hover{opacity:.88}.P_bl:active{transform:scale(.97)}
+.P_bl.blu{background:var(--ac);color:#fff}
+.P_bl.ind{background:var(--in);color:#fff}
+/* Info strip */
+.P_str{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.P_tl{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);
+  padding:13px 15px;display:flex;align-items:center;gap:11px;}
+.P_tlic{width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;background:var(--ac-lt);}
+.P_tlic svg{width:15px;height:15px;stroke:var(--ac);stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;fill:none}
+.P_tll{font-size:.63rem;color:var(--mu);font-weight:600;
+  text-transform:uppercase;letter-spacing:.4px}
+.P_tlv{font-size:.82rem;font-weight:700;color:var(--tx);margin-top:1px}
+/* Module topbar */
+.P_mbar{background:var(--sf);border-bottom:1px solid var(--bd);
+  padding:9px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.P_mic{width:28px;height:28px;border-radius:7px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;}
+.P_mic svg{width:14px;height:14px;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;fill:none}
+.P_mic.blu{background:var(--ac-lt)}.P_mic.blu svg{stroke:var(--ac)}
+.P_mic.ind{background:var(--in-lt)}.P_mic.ind svg{stroke:var(--in)}
+.P_min{flex:1;min-width:0}
+.P_mti{font-size:.83rem;font-weight:700;color:var(--tx)}
+.P_mpa{font-size:.65rem;color:var(--mu)}
+/* Module scroll wrapper */
+.P_mct{flex:1;overflow-y:auto;overflow-x:hidden;}
+/* About */
+/* Setup page */
+#P_stp_zone.drag{background:#eef4ff !important;border-color:var(--ac) !important;}
+#P_stp_zone:hover{background:#f0f4fb;border-color:#9ab2d0;}
+
+.P_agr{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.P_acd{background:var(--sf);border:1px solid var(--bd);
+  border-radius:var(--r);padding:20px}
+.P_acd h3{font-size:.87rem;font-weight:700;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px}
+.P_acd h3 svg{width:15px;height:15px;stroke:var(--ac);stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;fill:none}
+.P_ar{display:flex;gap:8px;padding:8px 0;
+  border-bottom:1px solid var(--bd);font-size:.77rem}
+.P_ar:last-child{border-bottom:none;padding-bottom:0}
+.P_arlb{color:var(--mu);font-weight:600;min-width:105px;flex-shrink:0}
+.P_arv{color:var(--tx2)}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--mu2)}
+
+/* ===== MODULE 1 SCOPED STYLES ===== */
+/* Iframe panels */
+.P_mw iframe {
+  flex:1;width:100%;border:none;display:block;min-height:0;
+}
+/* Setup page */
+#P_stp_zone.drag{background:#eef4ff !important;border-color:var(--ac) !important;}
+#P_stp_zone:hover{background:#f0f4fb;border-color:#9ab2d0;}
+</style>
+</head>
+<body>
+
+<header id="P_hdr">
+  <button class="P_bg" id="P_bur">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="P_lg">
+    <div class="P_lgm" id="P_lgm">
+      <svg viewBox="0 0 32 32" fill="none">
+        <defs><linearGradient id="PEG" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#0A5ED9"/><stop offset="100%" stop-color="#00B4E8"/>
+        </linearGradient></defs>
+        <path d="M16 4C9.4 4 4 9.4 4 16c0 6.6 5.4 12 12 12 2.5 0 4.8-.8 6.7-2.1-1.2.5-2.5.8-3.9.8-5.5 0-9.5-4.2-9.5-9.5 0-3.8 2.2-7.1 5.4-8.7C14.2 8.2 15.1 8 16 8c4.4 0 8 3.6 8 8 0 2.8-1.5 5.3-3.7 6.7C22 21.1 24 18.7 24 16c0-6.6-5.4-12-12-12z" fill="url(#PEG)"/>
+        <ellipse cx="16" cy="20" rx="6" ry="3" fill="url(#PEG)" opacity=".75"/>
+      </svg>
+    </div>
+    <div>
+      <div class="P_lgt" id="P_lgt">SMILE UAT Collaboration Portal</div>
+      <div class="P_lgs">OutSystems &middot; UAT Management Suite &middot; v1.0</div>
+    </div>
+  </div>
+  <div class="P_hr">
+    <div class="P_rp">
+      <button class="P_rb on" id="P_rA" onclick="P_role('admin')">Test Admin</button>
+      <button class="P_rb"    id="P_rU" onclick="P_role('user')">End User</button>
+    </div>
+    <div class="P_hd" id="P_hd" style="color:rgba(255,255,255,.82);font-size:.72rem;font-weight:500;background:rgba(255,255,255,.12);padding:5px 11px;border-radius:7px;white-space:nowrap;"></div>
+    <div class="P_ck" id="P_ck">00:00:00</div>
+  </div>
+</header>
+
+<div id="P_lay">
+  <nav id="P_sb">
+    <div class="P_sbt">Navigation</div>
+    <div class="P_sbs">
+      <div class="P_nv on" data-p="home">
+        <div class="P_ni"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <span class="P_nl">Home</span>
+      </div>
+    </div>
+    <div class="P_sbd"></div>
+    <div class="P_sbs">
+      <div class="P_sbst">Modules</div>
+      <div class="P_nv" data-p="m1">
+        <div class="P_ni blu"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/><polyline points="13 12 15 14 19 10"/></svg></div>
+        <span class="P_nl">TC Progress Monitor</span>
+        <span class="P_mb" style="background:#0078D4;color:#fff;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:auto;flex-shrink:0;">M1</span>
+      </div>
+      <div class="P_nv" data-p="m2">
+        <div class="P_ni ind"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <span class="P_nl">Issue Control Monitor</span>
+        <span class="P_mb" style="background:#5C2D91;color:#fff;font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:auto;flex-shrink:0;">M2</span>
+      </div>
+    </div>
+    <div class="P_sbd"></div>
+    <div class="P_sbs">
+      <div class="P_sbst">Help</div>
+      <div class="P_nv" data-p="about">
+        <div class="P_ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <span class="P_nl">About Portal</span>
+      </div>
+      <div class="P_nv" data-p="setup">
+        <div class="P_ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <span class="P_nl">Setup</span>
+      </div>
+    </div>
+  </nav>
+
+  <div id="P_mn">
+
+    <!-- HOME -->
+    <div class="P_pg on" id="P_pg_home">
+<div class="P_hro">
+        <div class="P_hro_eye">SMILE &middot; UAT Suite</div>
+        <h1>UAT Collaboration Portal</h1>
+        <p>Centralized workspace for Test Admins &amp; End Users &mdash; monitor test case progress, track issues, manage SLAs, and collaborate across two integrated modules.</p>
+        <div class="P_hro_chips">
+          <div class="P_hch"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>2 Modules Embedded</div>
+          <div class="P_hch" id="P_rc"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Test Admin</div>
+          <div class="P_hch"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span id="P_hd"></span></div>
+        </div>
+      </div>
+      <div class="P_cgr">
+        <div class="P_card">
+          <div class="P_chd">
+            <div class="P_cic blu"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/><polyline points="13 12 15 14 19 10"/></svg></div>
+            <div><div class="P_ct">UAT TC Progress Monitor</div><div class="P_cs">Module 1 &middot; Test Cases</div></div>
+          </div>
+          <div class="P_cd">Upload UAT test case Excel/CSV to track progress by status, dates, and testers. View monthly schedule, calendar, filter by status or date range, export PDF reports.</div>
+          <div class="P_tgs">
+            <span class="P_tg"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Overdue Report</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Monthly Schedule</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Calendar View</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Filter &amp; Search</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF Export</span>
+          </div>
+          <div class="P_ca"><button class="P_bl blu" onclick="P_go('m1')"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Launch Module 1</button></div>
+        </div>
+        <div class="P_card">
+          <div class="P_chd">
+            <div class="P_cic ind"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div><div class="P_ct">UAT Issue Control Monitor</div><div class="P_cs">Module 2 &middot; Issues &amp; SLA</div></div>
+          </div>
+          <div class="P_cd">Upload issue tracker data to analyze SLA compliance and processing times. View S1&ndash;S4 severity breaches, trend charts, and generate issue summary reports.</div>
+          <div class="P_tgs">
+            <span class="P_tg"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>SLA Tracking</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Trend Charts</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>S1&ndash;S4 Severity</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Processing Time</span>
+            <span class="P_tg"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Export Report</span>
+          </div>
+          <div class="P_ca"><button class="P_bl ind" onclick="P_go('m2')"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Launch Module 2</button></div>
+        </div>
+      </div>
+      <div class="P_str">
+        <div class="P_tl"><div class="P_tlic"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div><div class="P_tll">Supported</div><div class="P_tlv">Excel (.xlsx) &middot; CSV</div></div></div>
+        <div class="P_tl"><div class="P_tlic"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><div class="P_tll">Privacy</div><div class="P_tlv">Local &mdash; No server upload</div></div></div>
+        <div class="P_tl"><div class="P_tlic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div><div><div class="P_tll">SharePoint</div><div class="P_tlv">Compatible &mdash; Single file</div></div></div>
+        <div class="P_tl"><div class="P_tlic"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div><div class="P_tll">Version</div><div class="P_tlv">Standalone v1.0 &middot; 2026</div></div></div>
+      </div>
+    </div><!-- /home -->
+
+    <!-- ABOUT -->
+    <div class="P_pg" id="P_pg_about">
+      <div class="P_hro" style="background:linear-gradient(120deg,#1e2130,#253060)">
+        <div class="P_hro_eye">Documentation</div>
+        <h1>About This Portal</h1>
+        <p>Single-file standalone portal. Upload to SharePoint or any web server &mdash; no iframes, no dependencies, no server needed.</p>
+      </div>
+      <div class="P_agr">
+        <div class="P_acd">
+          <h3><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>How to Use</h3>
+          <div class="P_ar"><span class="P_arlb">Step 1</span><span class="P_arv">Click Launch Module 1 to track UAT test case progress. Upload Excel or CSV.</span></div>
+          <div class="P_ar"><span class="P_arlb">Step 2</span><span class="P_arv">Columns needed: Test Case ID, Name, Tester, Status, Start Date, End Date.</span></div>
+          <div class="P_ar"><span class="P_arlb">Step 3</span><span class="P_arv">Click Launch Module 2 for issue &amp; SLA monitoring. Upload issue tracker export.</span></div>
+          <div class="P_ar"><span class="P_arlb">Step 4</span><span class="P_arv">Use filters, date ranges, status chips. Export PDF reports as needed.</span></div>
+        </div>
+        <div class="P_acd">
+          <h3><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Technical Details</h3>
+          <div class="P_ar"><span class="P_arlb">Type</span><span class="P_arv">Single HTML file &middot; All modules embedded &middot; No iframes</span></div>
+          <div class="P_ar"><span class="P_arlb">M1 libs</span><span class="P_arv">XLSX.js &middot; jsPDF &middot; jspdf-autotable</span></div>
+          <div class="P_ar"><span class="P_arlb">M2 libs</span><span class="P_arv">XLSX.js &middot; Chart.js 4.4.1 &middot; html2canvas &middot; jsPDF</span></div>
+          <div class="P_ar"><span class="P_arlb">SharePoint</span><span class="P_arv">Upload single .html file to any Document Library</span></div>
+          <div class="P_ar"><span class="P_arlb">Privacy</span><span class="P_arv">100% local &mdash; data never leaves your browser</span></div>
+        </div>
+      </div>
+    </div><!-- /about -->
+    <!-- SETUP PAGE -->
+    <div class="P_pg" id="P_pg_setup">
+      <div class="P_hro" style="background:linear-gradient(120deg,#1a2540,#2d3a6e)">
+        <div class="P_hro_eye">Portal Configuration</div>
+        <h1>Setup &amp; Customisation</h1>
+        <p>Personalise the portal logo and branding for your team.</p>
+      </div>
+      <div style="max-width:620px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:22px;">
+
+        <!-- Logo Upload Card -->
+        <div class="P_acd" style="padding:24px;">
+          <h3 style="margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Portal Logo
+          </h3>
+
+          <!-- Current logo preview -->
+          <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
+            <div style="position:relative;">
+              <div id="P_stp_preview" style="width:72px;height:72px;background:#f0f4fa;border:2px solid #d0d9e8;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;"></div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:.88rem;color:var(--tx);margin-bottom:4px;">Current Logo</div>
+              <div id="P_stp_status" style="font-size:.78rem;color:var(--t2);">Default icon</div>
+            </div>
+          </div>
+
+          <!-- Upload area -->
+          <div id="P_stp_zone"
+               onclick="document.getElementById('P_stp_inp').click()"
+               ondragover="event.preventDefault();this.classList.add('drag')"
+               ondragleave="this.classList.remove('drag')"
+               ondrop="P_stp_drop(event)"
+               style="border:2px dashed #c0cce0;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:background .2s,border-color .2s;background:#fafbfd;">
+            <svg viewBox="0 0 24 24" style="width:36px;height:36px;stroke:#8ea4bc;stroke-width:1.5;fill:none;display:block;margin:0 auto 10px;">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div style="font-weight:600;font-size:.85rem;color:#526070;">Drag &amp; drop or <span style="color:var(--ac);">click to upload</span></div>
+            <div style="font-size:.75rem;color:#8ea4bc;margin-top:4px;">PNG &middot; JPG &middot; SVG &middot; WebP &middot; Max 2 MB</div>
+          </div>
+          <input type="file" id="P_stp_inp" accept="image/*" style="display:none" onchange="P_stp_load(this.files[0])">
+
+          <!-- New preview (appears after file selected) -->
+          <div id="P_stp_newbox" style="display:none;margin-top:18px;padding:16px;background:#f0f6ff;border-radius:10px;border:1px solid #c5d8f0;">
+            <div style="font-size:.78rem;color:var(--t2);margin-bottom:10px;font-weight:600;letter-spacing:.5px;">NEW LOGO PREVIEW</div>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="width:52px;height:52px;background:#fff;border-radius:10px;border:1px solid #d0daea;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <img id="P_stp_newimg" src="" alt="preview" style="max-width:100%;max-height:100%;object-fit:contain;">
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div id="P_stp_fname" style="font-size:.82rem;font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+                <div id="P_stp_fsize" style="font-size:.74rem;color:var(--t2);margin-top:2px;"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px;">
+              <button onclick="P_stp_save()" style="flex:1;padding:9px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:.83rem;cursor:pointer;">&#10003; Apply Logo</button>
+              <button onclick="P_stp_cancel()" style="padding:9px 16px;background:#e8ecf4;color:var(--tx);border:none;border-radius:8px;font-weight:600;font-size:.83rem;cursor:pointer;">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Reset -->
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e8ecf4;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span style="font-size:.78rem;color:var(--t2);">Remove custom logo and restore default icon</span>
+            <button onclick="P_stp_reset()" style="white-space:nowrap;padding:7px 16px;background:#f0f4fa;color:#526070;border:1px solid #d0d9e8;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;">Reset Default</button>
+          </div>
+        </div>
+
+        <!-- Portal Title Card -->
+        <div class="P_acd" style="padding:24px;">
+          <h3 style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Portal Title
+          </h3>
+          <div style="display:flex;gap:10px;">
+            <input id="P_stp_title" type="text" placeholder="SMILE UAT Collaboration Portal"
+                   style="flex:1;padding:9px 12px;border:1px solid #d0d9e8;border-radius:8px;font-size:.85rem;background:var(--bg);color:var(--tx);outline:none;transition:border-color .2s;"
+                   onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='#d0d9e8'">
+            <button onclick="P_stp_saveTitle()" style="white-space:nowrap;padding:9px 18px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:.83rem;cursor:pointer;">Apply</button>
+          </div>
+          <div style="margin-top:8px;font-size:.75rem;color:var(--t2);">Shown in the header bar. Saved in your browser.</div>
+        </div>
+
+      </div>
+    </div><!-- /setup -->
+    </div><!-- /home -->
+
+    <div class="P_pg" id="P_pg_about">
+      <div class="P_hro" style="background:linear-gradient(120deg,#1e2130,#253060)">
+        <div class="P_hro_eye">Documentation</div>
+        <h1>About This Portal</h1>
+        <p>Single-file standalone portal. Upload to SharePoint or any web server &mdash; no iframes, no dependencies, no server needed.</p>
+      </div>
+      <div class="P_agr">
+        <div class="P_acd">
+          <h3><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>How to Use</h3>
+          <div class="P_ar"><span class="P_arlb">Step 1</span><span class="P_arv">Click Launch Module 1 to track UAT test case progress. Upload Excel or CSV.</span></div>
+          <div class="P_ar"><span class="P_arlb">Step 2</span><span class="P_arv">Columns needed: Test Case ID, Name, Tester, Status, Start Date, End Date.</span></div>
+          <div class="P_ar"><span class="P_arlb">Step 3</span><span class="P_arv">Click Launch Module 2 for issue &amp; SLA monitoring. Upload issue tracker export.</span></div>
+          <div class="P_ar"><span class="P_arlb">Step 4</span><span class="P_arv">Use filters, date ranges, status chips. Export PDF reports as needed.</span></div>
+        </div>
+        <div class="P_acd">
+          <h3><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Technical Details</h3>
+          <div class="P_ar"><span class="P_arlb">Type</span><span class="P_arv">Multi-file deployment &middot; iframe modules &middot; SharePoint ready</span></div>
+          <div class="P_ar"><span class="P_arlb">M1 libs</span><span class="P_arv">XLSX.js &middot; jsPDF &middot; jspdf-autotable</span></div>
+          <div class="P_ar"><span class="P_arlb">M2 libs</span><span class="P_arv">XLSX.js &middot; Chart.js 4.4.1 &middot; html2canvas &middot; jsPDF</span></div>
+          <div class="P_ar"><span class="P_arlb">SharePoint</span><span class="P_arv">Upload single .html file to any Document Library</span></div>
+          <div class="P_ar"><span class="P_arlb">Privacy</span><span class="P_arv">100% local &mdash; data never leaves your browser</span></div>
+        </div>
+      </div>
+    </div><!-- /about -->
+
+    <!-- SETUP PAGE -->
+    <div class="P_pg" id="P_pg_setup">
+      <div class="P_hro" style="background:linear-gradient(120deg,#1a2540,#2d3a6e)">
+        <div class="P_hro_eye">Portal Configuration</div>
+        <h1>Setup &amp; Customisation</h1>
+        <p>Personalise the portal logo and branding for your team.</p>
+      </div>
+      <div style="max-width:620px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:22px;">
+
+        <!-- Logo Upload Card -->
+        <div class="P_acd" style="padding:24px;">
+          <h3 style="margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Portal Logo
+          </h3>
+
+          <!-- Current logo preview -->
+          <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;">
+            <div style="position:relative;">
+              <div id="P_stp_preview" style="width:72px;height:72px;background:#f0f4fa;border:2px solid #d0d9e8;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;"></div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:.88rem;color:var(--tx);margin-bottom:4px;">Current Logo</div>
+              <div id="P_stp_status" style="font-size:.78rem;color:var(--t2);">Default icon</div>
+            </div>
+          </div>
+
+          <!-- Upload area -->
+          <div id="P_stp_zone"
+               onclick="document.getElementById('P_stp_inp').click()"
+               ondragover="event.preventDefault();this.classList.add('drag')"
+               ondragleave="this.classList.remove('drag')"
+               ondrop="P_stp_drop(event)"
+               style="border:2px dashed #c0cce0;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:background .2s,border-color .2s;background:#fafbfd;">
+            <svg viewBox="0 0 24 24" style="width:36px;height:36px;stroke:#8ea4bc;stroke-width:1.5;fill:none;display:block;margin:0 auto 10px;">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div style="font-weight:600;font-size:.85rem;color:#526070;">Drag &amp; drop or <span style="color:var(--ac);">click to upload</span></div>
+            <div style="font-size:.75rem;color:#8ea4bc;margin-top:4px;">PNG &middot; JPG &middot; SVG &middot; WebP &middot; Max 2 MB</div>
+          </div>
+          <input type="file" id="P_stp_inp" accept="image/*" style="display:none" onchange="P_stp_load(this.files[0])">
+
+          <!-- New preview (appears after file selected) -->
+          <div id="P_stp_newbox" style="display:none;margin-top:18px;padding:16px;background:#f0f6ff;border-radius:10px;border:1px solid #c5d8f0;">
+            <div style="font-size:.78rem;color:var(--t2);margin-bottom:10px;font-weight:600;letter-spacing:.5px;">NEW LOGO PREVIEW</div>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="width:52px;height:52px;background:#fff;border-radius:10px;border:1px solid #d0daea;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <img id="P_stp_newimg" src="" alt="preview" style="max-width:100%;max-height:100%;object-fit:contain;">
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div id="P_stp_fname" style="font-size:.82rem;font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+                <div id="P_stp_fsize" style="font-size:.74rem;color:var(--t2);margin-top:2px;"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px;">
+              <button onclick="P_stp_save()" style="flex:1;padding:9px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:.83rem;cursor:pointer;">&#10003; Apply Logo</button>
+              <button onclick="P_stp_cancel()" style="padding:9px 16px;background:#e8ecf4;color:var(--tx);border:none;border-radius:8px;font-weight:600;font-size:.83rem;cursor:pointer;">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Reset -->
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e8ecf4;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span style="font-size:.78rem;color:var(--t2);">Remove custom logo and restore default icon</span>
+            <button onclick="P_stp_reset()" style="white-space:nowrap;padding:7px 16px;background:#f0f4fa;color:#526070;border:1px solid #d0d9e8;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;">Reset Default</button>
+          </div>
+        </div>
+
+        <!-- Portal Title Card -->
+        <div class="P_acd" style="padding:24px;">
+          <h3 style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Portal Title
+          </h3>
+          <div style="display:flex;gap:10px;">
+            <input id="P_stp_title" type="text" placeholder="SMILE UAT Collaboration Portal"
+                   style="flex:1;padding:9px 12px;border:1px solid #d0d9e8;border-radius:8px;font-size:.85rem;background:var(--bg);color:var(--tx);outline:none;transition:border-color .2s;"
+                   onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='#d0d9e8'">
+            <button onclick="P_stp_saveTitle()" style="white-space:nowrap;padding:9px 18px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:.83rem;cursor:pointer;">Apply</button>
+          </div>
+          <div style="margin-top:8px;font-size:.75rem;color:var(--t2);">Shown in the header bar. Saved in your browser.</div>
+        </div>
+
+      </div>
+    </div><!-- /setup -->
+
+    <!-- MODULE 1 wrapper -->
+    <div class="P_mw" id="P_pg_m1">
+      <div class="P_mbar">
+        <div class="P_mic blu"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/><polyline points="13 12 15 14 19 10"/></svg></div>
+        <div class="P_min"><div class="P_mti">UAT TC Progress Monitor</div><div class="P_mpa">Module 1 &middot; tc_progress.html</div></div>
+        <button class="P_rb" style="background:var(--ac-lt);color:var(--ac);border-radius:7px;padding:6px 12px;font-size:.73rem;" onclick="P_go('home')">&larr; Home</button>
+      </div>
+      <iframe src="tc_progress.html" title="UAT TC Progress Monitor"
+              style="flex:1;width:100%;border:none;display:block;min-height:0;"
+              allow="downloads"></iframe>
+    </div>
+
+    <!-- MODULE 2 wrapper -->
+    <div class="P_mw" id="P_pg_m2">
+      <div class="P_mbar">
+        <div class="P_mic ind"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="P_min"><div class="P_mti">UAT Issue Control Monitor</div><div class="P_mpa">Module 2 &middot; uat_issue.html</div></div>
+        <button class="P_rb" style="background:var(--in-lt);color:var(--in);border-radius:7px;padding:6px 12px;font-size:.73rem;" onclick="P_go('home')">&larr; Home</button>
+      </div>
+      <iframe src="uat_issue.html" title="UAT Issue Control Monitor"
+              style="flex:1;width:100%;border:none;display:block;min-height:0;"
+              allow="downloads"></iframe>
+    </div>
+
+  </div><!-- /P_mn -->
+</div><!-- /P_lay -->
+
+<script>
+
+/* ===== PORTAL JS ===== */
+
+/* ── Portal boot ─────────────────────────────────────────── */
+var P_cur = 'home';
+document.addEventListener('DOMContentLoaded', function() {
+  // Move module HTML from hidden staging divs into scroll panels
+  (function moveModules() {
+    // Move M2 staging HTML into its scroll panel
+    var _s = document.getElementById('P_m2_stg');
+    var _d = document.getElementById('P_m2_wrap');
+    if (_s && _d) { while (_s.firstChild) _d.appendChild(_s.firstChild); _s.remove(); }
+    // M1 is loaded as an isolated blob iframe — see M1 Loader script below
+  })();
+
+  // Date chip
+  var dEl = document.getElementById('P_hd');
+  if (dEl) dEl.textContent = new Date().toLocaleDateString('en-GB',
+    {weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+
+  // Clock
+  function P_tick() {
+    var t = new Date(), e = document.getElementById('P_ck');
+    function pp(n){ return n < 10 ? '0'+n : ''+n; }
+    if (e) e.textContent = pp(t.getHours())+':'+pp(t.getMinutes())+':'+pp(t.getSeconds());
+  }
+  P_tick(); setInterval(P_tick, 1000);
+
+  // Sidebar nav
+  document.querySelectorAll('.P_nv').forEach(function(n) {
+    n.addEventListener('click', function() { P_go(n.getAttribute('data-p')); });
+  });
+
+  // Init setup (logo + title)
+  P_stp_init();
+
+  // Burger slide toggle
+  document.getElementById('P_bur').addEventListener('click', function() {
+    document.getElementById('P_sb').classList.toggle('hidden');
+  });
+});
+
+function P_go(page) {
+  if (page === P_cur) return;
+  // Hide current
+  var old = document.getElementById('P_pg_' + P_cur);
+  if (old) { old.classList.remove('on'); old.style.display = 'none'; }
+  // Update nav
+  document.querySelectorAll('.P_nv').forEach(function(n) {
+    n.classList.toggle('on', n.getAttribute('data-p') === page);
+  });
+  P_cur = page;
+  // Show new
+  var el = document.getElementById('P_pg_' + page);
+  if (el) { el.style.display = ''; void el.offsetHeight; el.classList.add('on'); }
+}
+
+function P_role(r) {
+  document.getElementById('P_rA').classList.toggle('on', r === 'admin');
+  document.getElementById('P_rU').classList.toggle('on', r === 'user');
+  var c = document.getElementById('P_rc');
+  if (c) {
+    var svg = c.querySelector('svg').outerHTML;
+    c.innerHTML = svg + (r === 'admin' ? ' Test Admin' : ' End User');
+  }
+}
+
+
+/* ── Setup: Logo & Title ─────────────────────────────────────────────────── */
+var _P_stp_data = null;
+
+function P_stp_init() {
+  var saved = '';
+  try { saved = localStorage.getItem('P_portal_logo') || ''; } catch(e) {}
+  P_stp_applyLogo(saved);
+  var title = '';
+  try { title = localStorage.getItem('P_portal_title') || ''; } catch(e) {}
+  if (title) { var el = document.getElementById('P_lgt'); if (el) el.textContent = title; }
+  var inp = document.getElementById('P_stp_title');
+  if (inp) inp.value = title || 'SMILE UAT Collaboration Portal';
+}
+
+function P_stp_applyLogo(dataUrl) {
+  var box  = document.getElementById('P_lgm');
+  var prev = document.getElementById('P_stp_preview');
+  var stat = document.getElementById('P_stp_status');
+  var defSvg = '<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="PEG2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0A5ED9"/><stop offset="100%" stop-color="#00B4E8"/></linearGradient></defs><path d="M16 4C9.4 4 4 9.4 4 16c0 6.6 5.4 12 12 12 2.5 0 4.8-.8 6.7-2.1-1.2.5-2.5.8-3.9.8-5.5 0-9.5-4.2-9.5-9.5 0-3.8 2.2-7.1 5.4-8.7C14.2 8.2 15.1 8 16 8c4.4 0 8 3.6 8 8 0 2.8-1.5 5.3-3.7 6.7C22 21.1 24 18.7 24 16c0-6.6-5.4-12-12-12z" fill="url(#PEG2)"/><ellipse cx="16" cy="20" rx="6" ry="3" fill="url(#PEG2)" opacity=".75"/></svg>';
+  if (dataUrl) {
+    var imgTag = '<img src="' + dataUrl + '" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;" alt="logo">';
+    if (box)  box.innerHTML = imgTag;
+    if (prev) prev.innerHTML = imgTag;
+    if (stat) stat.textContent = 'Custom logo applied';
+  } else {
+    if (box)  box.innerHTML = defSvg;
+    if (prev) prev.innerHTML = defSvg;
+    if (stat) stat.textContent = 'Default icon (OutSystems gradient)';
+  }
+}
+
+function P_stp_load(file) {
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { alert('Image too large. Max 2 MB.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _P_stp_data = e.target.result;
+    var img   = document.getElementById('P_stp_newimg');
+    var fname = document.getElementById('P_stp_fname');
+    var fsize = document.getElementById('P_stp_fsize');
+    var box   = document.getElementById('P_stp_newbox');
+    if (img)   img.src = _P_stp_data;
+    if (fname) fname.textContent = file.name;
+    if (fsize) fsize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+    if (box)   box.style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function P_stp_drop(ev) {
+  ev.preventDefault();
+  var zone = document.getElementById('P_stp_zone');
+  if (zone) zone.classList.remove('drag');
+  var file = ev.dataTransfer && ev.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) P_stp_load(file);
+}
+
+function P_stp_save() {
+  if (!_P_stp_data) return;
+  try { localStorage.setItem('P_portal_logo', _P_stp_data); } catch(e) {}
+  P_stp_applyLogo(_P_stp_data);
+  _P_stp_data = null;
+  var box = document.getElementById('P_stp_newbox');
+  if (box) box.style.display = 'none';
+  var inp = document.getElementById('P_stp_inp');
+  if (inp) inp.value = '';
+  P_toast('Logo applied successfully!');
+}
+
+function P_stp_cancel() {
+  _P_stp_data = null;
+  var box = document.getElementById('P_stp_newbox');
+  if (box) box.style.display = 'none';
+  var inp = document.getElementById('P_stp_inp');
+  if (inp) inp.value = '';
+}
+
+function P_stp_reset() {
+  try { localStorage.removeItem('P_portal_logo'); } catch(e) {}
+  P_stp_applyLogo('');
+  P_toast('Logo reset to default');
+}
+
+function P_stp_saveTitle() {
+  var inp = document.getElementById('P_stp_title');
+  var val = inp ? inp.value.trim() : '';
+  var el  = document.getElementById('P_lgt');
+  if (el) el.textContent = val || 'SMILE UAT Collaboration Portal';
+  try { localStorage.setItem('P_portal_title', val); } catch(e) {}
+  P_toast('Title updated!');
+}
+
+function P_toast(msg) {
+  var t = document.getElementById('P_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'P_toast';
+    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);' +
+      'background:#1a2b3c;color:#fff;padding:10px 22px;border-radius:22px;' +
+      'font-size:.82rem;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3);' +
+      'transition:opacity .3s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function(){ t.style.opacity = '0'; }, 2200);
+}
+
+
+</script>
+</body>
+</html>
